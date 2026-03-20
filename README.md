@@ -1,4 +1,4 @@
-# ZeroByte Family — Grounding Artifact
+# ZeroByte Family
 
 *A deep analysis of the ZeroBytes methodology lineage, its existing descendants, and new research directions.*
 
