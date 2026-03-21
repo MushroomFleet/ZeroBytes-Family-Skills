@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Cubic · NPC Group Dynamics</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:        #06090f;
+    --surface:   #0d1220;
+    --border:    #1a2340;
+    --dim:       #2a3556;
+    --text:      #c8d4f0;
+    --muted:     #5a6a90;
+    --cohesive:  #00e8a0;
+    --volatile:  #ff3855;
+    --shifting:  #ffb830;
+    --node:      #4a80ff;
+    --node-bg:   #1a2a60;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 18px 28px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--node);
+  }
+
+  header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+
+  .main {
+    display: flex;
+    flex: 1;
+    gap: 0;
+  }
+
+  /* ── Canvas Panel ── */
+  .canvas-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 16px;
+    border-right: 1px solid var(--border);
+  }
+
+  #graph {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--dim);
+    padding: 8px 16px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  button:hover { border-color: var(--node); color: var(--node); }
+  button.active { background: var(--node-bg); border-color: var(--node); color: var(--node); }
+
+  .seed-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  input[type=range] {
+    width: 120px;
+    accent-color: var(--node);
+  }
+
+  #seedVal {
+    color: var(--text);
+    min-width: 40px;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* Dynamic result */
+  .dynamic-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .dynamic-type {
+    font-size: 28px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .dynamic-type.cohesive  { color: var(--cohesive); }
+  .dynamic-type.volatile  { color: var(--volatile); }
+  .dynamic-type.shifting  { color: var(--shifting); }
+  .dynamic-type.none      { color: var(--muted); }
+
+  .stability-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+  }
+
+  .stability-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stability-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease, background 0.4s ease;
+  }
+
+  .stability-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    min-width: 42px;
+    text-align: right;
+  }
+
+  .role-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .role-row:last-child { border-bottom: none; }
+
+  .role-icon {
+    font-size: 18px;
+    width: 28px;
+    text-align: center;
+  }
+
+  .role-info { flex: 1; }
+
+  .role-name {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .role-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Pair bonds */
+  .pairs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pair-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .pair-label { color: var(--muted); min-width: 60px; }
+
+  .pair-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .pair-fill {
+    height: 100%;
+    background: var(--dim);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .pair-val { color: var(--text); min-width: 34px; text-align: right; }
+
+  /* Emergence proof */
+  .proof-box {
+    background: #0a0f1c;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .proof-box .hi { color: var(--text); }
+  .proof-box .warn { color: var(--shifting); }
+  .proof-box .ok   { color: var(--cohesive); }
+  .proof-box .err  { color: var(--volatile); }
+
+  /* Heatmap legend */
+  .heatmap-legend {
+    display: flex;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .leg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  .hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.08em;
+  }
+
+  /* NPC roster */
+  .roster-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .roster-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .roster-item:hover { border-color: var(--node); }
+  .roster-item.selected { border-color: var(--node); background: var(--node-bg); }
+
+  .roster-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .roster-item.selected .roster-dot { background: var(--node); }
+
+  .roster-sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Zero-Cubic</h1>
+  <span>NPC GROUP DYNAMICS · O(N³) TRIADIC EMERGENCE</span>
+</header>
+
+<div class="main">
+  <div class="canvas-panel">
+    <canvas id="graph" width="520" height="480"></canvas>
+    <div class="hint">CLICK CANVAS OR ROSTER TO SELECT 3 NPCS</div>
+    <div class="controls">
+      <button id="btnRandom">⟳ Randomize Seed</button>
+      <button id="btnHeatmap">◈ Show All Triads</button>
+      <button id="btnClear">✕ Clear Selection</button>
+    </div>
+    <div class="seed-control">
+      SEED
+      <input type="range" id="seedSlider" min="0" max="9999" value="4242">
+      <span id="seedVal">4242</span>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <!-- Dynamic result -->
+    <div>
+      <div class="section-label">Triadic Emergence</div>
+      <div class="dynamic-card" id="dynamicCard">
+        <div class="dynamic-type none" id="dynType">SELECT 3 NPCS</div>
+        <div class="stability-bar-wrap" id="stabWrap" style="display:none">
+          <div class="stability-bar"><div class="stability-fill" id="stabFill"></div></div>
+          <div class="stability-val" id="stabVal"></div>
+        </div>
+        <div id="roleRows"></div>
+      </div>
+    </div>
+
+    <!-- Pair bonds -->
+    <div id="pairSection" style="display:none">
+      <div class="section-label">Pairwise Bonds (O(N²) layer)</div>
+      <div class="pairs-grid" id="pairsGrid"></div>
+    </div>
+
+    <!-- Emergence proof -->
+    <div id="proofSection" style="display:none">
+      <div class="section-label">Emergence Proof</div>
+      <div class="proof-box" id="proofBox"></div>
+    </div>
+
+    <!-- Heatmap stats -->
+    <div id="heatSection" style="display:none">
+      <div class="section-label">Heatmap Distribution</div>
+      <div class="proof-box" id="heatStats"></div>
+      <div class="heatmap-legend" style="margin-top:8px">
+        <span><span class="leg-dot" style="background:var(--cohesive)"></span>Cohesive</span>
+        <span><span class="leg-dot" style="background:var(--shifting)"></span>Shifting</span>
+        <span><span class="leg-dot" style="background:var(--volatile)"></span>Volatile</span>
+      </div>
+    </div>
+
+    <!-- Roster -->
+    <div>
+      <div class="section-label">NPC Roster (click to select)</div>
+      <div class="roster-grid" id="rosterGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Zero-Cubic Engine (pure deterministic, no Math.random in logic) ──
+
+// Fast 32-bit hash mix (Murmur3-style, portable across all JS engines)
+function fmix32(h) {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b)|0;
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35)|0;
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+function posHash(id, salt) {
+  let h = fmix32((id * 2654435761 + salt * 374761393)|0);
+  return h >>> 0;
+}
+
+function pairHash(a, b, salt) {
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  let h = fmix32((lo * 2246822519 + hi * 374761393 + salt * 2654435761)|0);
+  return h >>> 0;
+}
+
+// Symmetric triple hash — sorts all three IDs
+function tripleHash(a, b, c, salt) {
+  const ids = [a, b, c].sort((x, y) => x - y);
+  let h = fmix32(
+    (ids[0] * 2246822519 + ids[1] * 374761393 + ids[2] * 2654435761 + salt * 805459861)|0
+  );
+  return h >>> 0;
+}
+
+// Asymmetric triple hash — order-dependent (for leader/scapegoat direction)
+function asymTripleHash(a, b, c, salt) {
+  let h = fmix32((a * 2246822519 + b * 374761393 + c * 2654435761 + salt * 805459861)|0);
+  return h >>> 0;
+}
+
+function toFloat(h) { return (h >>> 0) / 0x100000000; }
+
+// O(1) — entity intrinsic traits
+function npcTraits(id, seed) {
+  const h = posHash(id, seed);
+  return {
+    dominance:  toFloat(h),
+    resilience: toFloat(fmix32(h + 7)),
+    charisma:   toFloat(fmix32(h + 13)),
+    volatility: toFloat(fmix32(h + 19)),
+  };
+}
+
+// O(N²) — pairwise bond
+function pairBond(a, b, seed) {
+  const h = pairHash(a, b, seed + 100);
+  return {
+    affinity: toFloat(h),
+    rivalry:  toFloat(h >>> 16 | (h << 16)),
+  };
+}
+
+// O(N³) — THE TRIADIC EMERGENCE
+function groupDynamic(idA, idB, idC, seed) {
+  const stability    = toFloat(tripleHash(idA, idB, idC, seed));
+  const dominantIdx  = Math.floor(toFloat(asymTripleHash(idA, idB, idC, seed + 1)) * 3);
+
+  let type, roleKey, roleIdx;
+  if (stability > 0.75) {
+    type = 'cohesive';   roleKey = 'leaderIndex';    roleIdx = dominantIdx;
+  } else if (stability < 0.25) {
+    type = 'volatile';   roleKey = 'scapegoatIndex'; roleIdx = dominantIdx;
+  } else {
+    type = 'shifting';   roleKey = 'pivotIndex';     roleIdx = dominantIdx;
+  }
+  return { type, stability, roleKey, roleIdx };
+}
+
+// ── NPC Data ──
+const NPCS = [
+  { id: 0, name: 'Mira',  sub: 'quiet schemer' },
+  { id: 1, name: 'Dax',   sub: 'loud braggart' },
+  { id: 2, name: 'Senna', sub: 'peacemaker' },
+  { id: 3, name: 'Kolt',  sub: 'contrarian' },
+  { id: 4, name: 'Yael',  sub: 'opportunist' },
+  { id: 5, name: 'Fenn',  sub: 'follower' },
+  { id: 6, name: 'Roja',  sub: 'grudge-holder' },
+  { id: 7, name: 'Tabs',  sub: 'wild card' },
+];
+
+// Fixed canvas positions — arranged in a pleasing ring
+const POS = [
+  [260,  80], [420, 150], [460, 310], [370, 420],
+  [150, 420], [ 60, 310], [100, 150], [260, 260],
+];
+
+let worldSeed = 4242;
+let selected  = [];
+let heatmapOn = false;
+let animHandle = null;
+
+// ── Canvas rendering ──
+const canvas = document.getElementById('graph');
+const ctx    = canvas.getContext('2d');
+
+function dynColor(type) {
+  if (type === 'cohesive') return '#00e8a0';
+  if (type === 'volatile') return '#ff3855';
+  return '#ffb830';
+}
+
+function drawHeatmapEdges() {
+  const n = NPCS.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      for (let k = j + 1; k < n; k++) {
+        const d = groupDynamic(NPCS[i].id, NPCS[j].id, NPCS[k].id, worldSeed);
+        const c = dynColor(d.type);
+        const ids = [i, j, k];
+        ctx.save();
+        ctx.globalAlpha = 0.13;
+        ctx.strokeStyle = c;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 5]);
+        ctx.beginPath();
+        ctx.moveTo(POS[ids[0]][0], POS[ids[0]][1]);
+        ctx.lineTo(POS[ids[1]][0], POS[ids[1]][1]);
+        ctx.lineTo(POS[ids[2]][0], POS[ids[2]][1]);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+let phase = 0;
+
+function drawFrame() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Subtle grid
+  ctx.save();
+  ctx.strokeStyle = '#0f1828';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  if (heatmapOn) drawHeatmapEdges();
+
+  // Draw edges between all pairs (dim)
+  ctx.save();
+  ctx.strokeStyle = '#1a2340';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < NPCS.length; i++) {
+    for (let j = i + 1; j < NPCS.length; j++) {
+      ctx.beginPath();
+      ctx.moveTo(POS[i][0], POS[i][1]);
+      ctx.lineTo(POS[j][0], POS[j][1]);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // Draw active triangle
+  if (selected.length === 3) {
+    const d   = groupDynamic(NPCS[selected[0]].id, NPCS[selected[1]].id, NPCS[selected[2]].id, worldSeed);
+    const col = dynColor(d.type);
+
+    // Pulsing glow fill
+    let alpha, lineW;
+    if (d.type === 'cohesive') {
+      alpha = 0.06 + 0.04 * Math.sin(phase * 0.04);
+      lineW = 2 + Math.sin(phase * 0.04) * 0.5;
+    } else if (d.type === 'volatile') {
+      alpha = 0.07 + 0.06 * Math.abs(Math.sin(phase * 0.18));
+      lineW = 2 + Math.abs(Math.sin(phase * 0.18)) * 1.2;
+    } else {
+      alpha = 0.05 + 0.04 * Math.sin(phase * 0.07);
+      lineW = 1.5 + 0.5 * Math.sin(phase * 0.07);
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(POS[selected[0]][0], POS[selected[0]][1]);
+    ctx.lineTo(POS[selected[1]][0], POS[selected[1]][1]);
+    ctx.lineTo(POS[selected[2]][0], POS[selected[2]][1]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Triangle edges
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = lineW;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(POS[selected[0]][0], POS[selected[0]][1]);
+    ctx.lineTo(POS[selected[1]][0], POS[selected[1]][1]);
+    ctx.lineTo(POS[selected[2]][0], POS[selected[2]][1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw nodes
+  NPCS.forEach((npc, i) => {
+    const [x, y] = POS[i];
+    const isSel   = selected.includes(i);
+    const role    = getRoleForNode(i);
+
+    // Outer glow if selected
+    if (isSel) {
+      ctx.save();
+      ctx.shadowColor = '#4a80ff';
+      ctx.shadowBlur  = 22;
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d1a40';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Node circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 19, 0, Math.PI * 2);
+    ctx.fillStyle = isSel ? '#1a2a60' : '#0d1220';
+    ctx.fill();
+    ctx.strokeStyle = isSel ? '#4a80ff' : '#1a2340';
+    ctx.lineWidth   = isSel ? 2 : 1;
+    ctx.stroke();
+    ctx.restore();
+
+    // Role badge
+    if (role) {
+      ctx.save();
+      ctx.font = '14px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const pulse = 0.85 + 0.15 * Math.sin(phase * 0.06);
+      ctx.globalAlpha = pulse;
+      ctx.fillText(role, x + 16, y - 16);
+      ctx.restore();
+    }
+
+    // Label
+    ctx.save();
+    ctx.font = 'bold 13px Barlow Condensed, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isSel ? '#a0c0ff' : '#5a6a90';
+    ctx.fillText(npc.name, x, y);
+    ctx.restore();
+  });
+
+  phase++;
+  animHandle = requestAnimationFrame(drawFrame);
+}
+
+function getRoleForNode(nodeIdx) {
+  if (selected.length !== 3) return null;
+  const idx = selected.indexOf(nodeIdx);
+  if (idx < 0) return null;
+  const d = groupDynamic(NPCS[selected[0]].id, NPCS[selected[1]].id, NPCS[selected[2]].id, worldSeed);
+  if (idx !== d.roleIdx) return null;
+  if (d.type === 'cohesive')  return '👑';
+  if (d.type === 'volatile')  return '🎯';
+  return '🔄';
+}
+
+// ── Sidebar updates ──
+function updateSidebar() {
+  const dynType   = document.getElementById('dynType');
+  const stabWrap  = document.getElementById('stabWrap');
+  const stabFill  = document.getElementById('stabFill');
+  const stabVal   = document.getElementById('stabVal');
+  const roleRows  = document.getElementById('roleRows');
+  const pairSec   = document.getElementById('pairSection');
+  const pairsGrid = document.getElementById('pairsGrid');
+  const proofSec  = document.getElementById('proofSection');
+  const proofBox  = document.getElementById('proofBox');
+  const heatSec   = document.getElementById('heatSection');
+
+  if (selected.length !== 3) {
+    dynType.textContent = selected.length === 0 ? 'SELECT 3 NPCS' : `${3 - selected.length} MORE…`;
+    dynType.className   = 'dynamic-type none';
+    stabWrap.style.display = 'none';
+    roleRows.innerHTML = '';
+    pairSec.style.display  = 'none';
+    proofSec.style.display = 'none';
+    heatSec.style.display  = heatmapOn ? 'block' : 'none';
+    if (heatmapOn) updateHeatStats();
+    return;
+  }
+
+  const [i, j, k] = selected;
+  const a = NPCS[i].id, b = NPCS[j].id, c = NPCS[k].id;
+  const d = groupDynamic(a, b, c, worldSeed);
+
+  // Type
+  dynType.textContent = d.type.toUpperCase();
+  dynType.className   = `dynamic-type ${d.type}`;
+
+  // Stability bar
+  stabWrap.style.display = 'flex';
+  const pct = (d.stability * 100).toFixed(0);
+  stabFill.style.width      = pct + '%';
+  stabFill.style.background = dynColor(d.type);
+  stabVal.textContent       = d.stability.toFixed(3);
+  stabVal.style.color       = dynColor(d.type);
+
+  // Roles
+  const npcs3 = [NPCS[i], NPCS[j], NPCS[k]];
+  roleRows.innerHTML = '';
+  npcs3.forEach((npc, idx) => {
+    let icon = '', label = 'member';
+    if (idx === d.roleIdx) {
+      if (d.type === 'cohesive') { icon = '👑'; label = 'LEADER'; }
+      else if (d.type === 'volatile') { icon = '🎯'; label = 'SCAPEGOAT'; }
+      else { icon = '🔄'; label = 'PIVOT'; }
+    }
+    const row = document.createElement('div');
+    row.className = 'role-row';
+    row.innerHTML = `
+      <div class="role-icon">${icon || '·'}</div>
+      <div class="role-info">
+        <div class="role-name">${npc.name}</div>
+        <div class="role-label">${label}</div>
+      </div>`;
+    roleRows.appendChild(row);
+  });
+
+  // Pair bonds
+  pairSec.style.display = 'block';
+  const bonds = [
+    { label: `${NPCS[i].name}↔${NPCS[j].name}`, v: pairBond(a, b, worldSeed).affinity },
+    { label: `${NPCS[j].name}↔${NPCS[k].name}`, v: pairBond(b, c, worldSeed).affinity },
+    { label: `${NPCS[i].name}↔${NPCS[k].name}`, v: pairBond(a, c, worldSeed).affinity },
+  ];
+  pairsGrid.innerHTML = '';
+  bonds.forEach(bond => {
+    const row = document.createElement('div');
+    row.className = 'pair-row';
+    row.innerHTML = `
+      <div class="pair-label">${bond.label}</div>
+      <div class="pair-bar"><div class="pair-fill" style="width:${(bond.v*100).toFixed(0)}%"></div></div>
+      <div class="pair-val">${bond.v.toFixed(3)}</div>`;
+    pairsGrid.appendChild(row);
+  });
+
+  // Emergence proof
+  proofSec.style.display = 'block';
+  const avgPair = (bonds[0].v + bonds[1].v + bonds[2].v) / 3;
+  const pairPrediction = avgPair > 0.6 ? 'cohesive' : avgPair < 0.4 ? 'volatile' : 'shifting';
+  const match = pairPrediction === d.type;
+  proofBox.innerHTML = `
+<span class="hi">Pair-sum avg:</span>  ${avgPair.toFixed(3)}<br>
+<span class="hi">Pair prediction:</span> <span class="${match ? 'ok' : 'warn'}">${pairPrediction.toUpperCase()}</span><br>
+<span class="hi">Zero-Cubic actual:</span> <span class="${match ? 'ok' : 'err'}">${d.type.toUpperCase()}</span><br>
+<span class="hi">Stability seed:</span>  ${d.stability.toFixed(6)}<br>
+${match
+  ? `<span class="ok">↳ Pair sums agree this time.</span>`
+  : `<span class="warn">↳ EMERGENCE: triad diverges from pair sums — the triangle has properties the edges alone cannot predict.</span>`
+}`;
+
+  heatSec.style.display = heatmapOn ? 'block' : 'none';
+  if (heatmapOn) updateHeatStats();
+}
+
+function updateHeatStats() {
+  const heatStats = document.getElementById('heatStats');
+  const n = NPCS.length;
+  let co = 0, sh = 0, vo = 0;
+  let bestStab = -1, worstStab = 2;
+  let bestTriple = '', worstTriple = '';
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      for (let k = j + 1; k < n; k++) {
+        const d = groupDynamic(NPCS[i].id, NPCS[j].id, NPCS[k].id, worldSeed);
+        if (d.type === 'cohesive')  co++;
+        if (d.type === 'shifting')  sh++;
+        if (d.type === 'volatile')  vo++;
+        if (d.stability > bestStab)  { bestStab = d.stability;  bestTriple = `${NPCS[i].name}, ${NPCS[j].name}, ${NPCS[k].name}`; }
+        if (d.stability < worstStab) { worstStab = d.stability; worstTriple = `${NPCS[i].name}, ${NPCS[j].name}, ${NPCS[k].name}`; }
+      }
+    }
+  }
+
+  const total = co + sh + vo;
+  heatStats.innerHTML = `
+<span class="hi">C(8,3) = ${total} triads</span><br>
+<span style="color:var(--cohesive)">Cohesive:</span>  ${co} (${(co/total*100).toFixed(0)}%)<br>
+<span style="color:var(--shifting)">Shifting:</span>  ${sh} (${(sh/total*100).toFixed(0)}%)<br>
+<span style="color:var(--volatile)">Volatile:</span>  ${vo} (${(vo/total*100).toFixed(0)}%)<br><br>
+<span class="ok">Most stable:</span>  ${bestTriple}<br>
+<span class="hi">  stability: ${bestStab.toFixed(4)}</span><br>
+<span class="err">Most volatile:</span> ${worstTriple}<br>
+<span class="hi">  stability: ${worstStab.toFixed(4)}</span>`;
+}
+
+// ── Roster ──
+function buildRoster() {
+  const grid = document.getElementById('rosterGrid');
+  grid.innerHTML = '';
+  NPCS.forEach((npc, i) => {
+    const item = document.createElement('div');
+    item.className = 'roster-item' + (selected.includes(i) ? ' selected' : '');
+    item.innerHTML = `<div class="roster-dot"></div><div><div>${npc.name}</div><div class="roster-sub">${npc.sub}</div></div>`;
+    item.addEventListener('click', () => toggleNode(i));
+    grid.appendChild(item);
+  });
+}
+
+function toggleNode(i) {
+  if (selected.includes(i)) {
+    selected = selected.filter(x => x !== i);
+  } else if (selected.length < 3) {
+    selected.push(i);
+  }
+  buildRoster();
+  updateSidebar();
+}
+
+// ── Canvas click ──
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx   = (e.clientX - rect.left) * (canvas.width  / rect.width);
+  const my   = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  for (let i = 0; i < NPCS.length; i++) {
+    const [x, y] = POS[i];
+    if (Math.hypot(mx - x, my - y) < 22) { toggleNode(i); return; }
+  }
+});
+
+// ── Controls ──
+document.getElementById('btnRandom').addEventListener('click', () => {
+  worldSeed = Math.floor(Math.random() * 10000);
+  document.getElementById('seedSlider').value = worldSeed;
+  document.getElementById('seedVal').textContent = worldSeed;
+  updateSidebar();
+});
+
+document.getElementById('btnHeatmap').addEventListener('click', () => {
+  heatmapOn = !heatmapOn;
+  document.getElementById('btnHeatmap').classList.toggle('active', heatmapOn);
+  document.getElementById('heatSection').style.display = heatmapOn ? 'block' : 'none';
+  if (heatmapOn) updateHeatStats();
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  selected = [];
+  buildRoster();
+  updateSidebar();
+});
+
+document.getElementById('seedSlider').addEventListener('input', (e) => {
+  worldSeed = parseInt(e.target.value);
+  document.getElementById('seedVal').textContent = worldSeed;
+  updateSidebar();
+});
+
+// ── Init ──
+buildRoster();
+updateSidebar();
+drawFrame();
+</script>
+</body>
+</html>
