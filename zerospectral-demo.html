@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Spectral Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0f;
+    --bg2: #0d1018;
+    --panel: #111520;
+    --border: #1e2535;
+    --teal: #00e5c8;
+    --amber: #ffb830;
+    --violet: #a855f7;
+    --red: #ff4d6d;
+    --muted: #3a4560;
+    --text: #c8d4f0;
+    --dim: #5a6888;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--teal);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--amber); }
+  .seed-row { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .seed-label { color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .seed-input {
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    color: var(--teal);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 6px 12px;
+    width: 130px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .seed-input:focus { border-color: var(--teal); }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--teal); color: var(--teal); }
+  .btn.active { background: var(--teal); color: var(--bg); border-color: var(--teal); }
+  .badge {
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    color: var(--dim);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+  }
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .num {
+    color: var(--teal);
+    font-size: 13px;
+  }
+  .section-title .tag {
+    margin-left: auto;
+    color: var(--amber);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  /* ── PANEL 1: LOD ── */
+  .lod-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .lod-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .lod-item canvas {
+    border: 1px solid var(--border);
+    display: block;
+    image-rendering: pixelated;
+  }
+  .lod-label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+  .lod-label span { color: var(--teal); }
+
+  /* ── PANEL 2: BIOME ── */
+  .biome-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .biome-info {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    min-width: 200px;
+    flex: 0 0 220px;
+  }
+  .biome-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--amber);
+    margin-bottom: 10px;
+    min-height: 21px;
+  }
+  .amp-bar-row { display: flex; flex-direction: column; gap: 4px; }
+  .amp-row { display: flex; align-items: center; gap: 8px; }
+  .amp-row-label { color: var(--dim); font-size: 10px; width: 28px; }
+  .amp-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .amp-bar-fill {
+    height: 100%;
+    background: var(--teal);
+    transition: width 0.25s ease;
+  }
+  #biome-canvas { border: 1px solid var(--border); cursor: crosshair; image-rendering: pixelated; }
+  .legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ── PANEL 3: AUDIO ── */
+  .audio-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  #audio-canvas { border: 1px solid var(--border); cursor: pointer; image-rendering: pixelated; }
+  .audio-info {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    min-width: 200px;
+    flex: 0 0 220px;
+  }
+  .space-type {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--teal);
+    margin-bottom: 10px;
+    min-height: 21px;
+    text-transform: uppercase;
+  }
+  .audio-bars { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; }
+  .bar-row-label { color: var(--dim); font-size: 10px; width: 48px; }
+  .bar-track { flex: 1; height: 10px; background: var(--bg); border: 1px solid var(--border); }
+  .bar-fill { height: 100%; background: var(--violet); transition: width 0.25s; }
+  .bar-fill.amber { background: var(--amber); }
+  .bar-fill.red   { background: var(--red); }
+  .audio-hint { color: var(--dim); font-size: 10px; margin-top: 8px; }
+
+  /* ── PANEL 4: INTERFERENCE ── */
+  .intf-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  #intf-canvas { border: 1px solid var(--border); cursor: crosshair; image-rendering: pixelated; }
+  .intf-controls {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    min-width: 200px;
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .control-label { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+  .control-value { color: var(--teal); font-size: 14px; font-weight: 600; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--muted);
+    outline: none;
+    border-radius: 2px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--teal);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .intf-value-display {
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .intf-value-display span { color: var(--text); }
+  .source-dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .source-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    opacity: 0.7;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--muted); }
+
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZERO<span>-</span>SPECTRAL</div>
+  <div class="seed-row">
+    <span class="seed-label">World Seed</span>
+    <input class="seed-input" type="number" id="seed-input" value="31415926" min="0" max="999999999">
+    <button class="btn" id="rand-btn">⟳ Randomise</button>
+    <span class="badge">Frequency-Domain-is-Seed</span>
+  </div>
+</header>
+
+<!-- ① LOD -->
+<div class="section">
+  <div class="section-title">
+    <span class="num">①</span> Adaptive Level of Detail
+    <span class="tag">Same seed · variable band count</span>
+  </div>
+  <div class="lod-grid" id="lod-grid"></div>
+</div>
+
+<!-- ② BIOME -->
+<div class="section">
+  <div class="section-title">
+    <span class="num">②</span> Biome Spectral Fingerprinting
+    <span class="tag">Amplitude profile defines texture character</span>
+  </div>
+  <div class="biome-row">
+    <div>
+      <canvas id="biome-canvas" width="512" height="256"></canvas>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#5fa37a"></div>smooth plains</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7a9e5a"></div>rolling hills</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7a8ea0"></div>jagged mountains</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3a7a9e"></div>fractal coast</div>
+      </div>
+    </div>
+    <div class="biome-info">
+      <div class="biome-name" id="biome-name">Hover to inspect</div>
+      <div class="amp-bar-row" id="amp-bars"></div>
+      <div style="color:var(--dim);font-size:10px;margin-top:10px;">Spectral amplitude profile<br>band 0 (coarse) → 7 (fine)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ AUDIO -->
+<div class="section">
+  <div class="section-title">
+    <span class="num">③</span> Procedural Audio Character Map
+    <span class="tag">Click any cell to hear its acoustic signature</span>
+  </div>
+  <div class="audio-row">
+    <div>
+      <canvas id="audio-canvas" width="512" height="512"></canvas>
+    </div>
+    <div class="audio-info">
+      <div class="space-type" id="space-type">—</div>
+      <div class="audio-bars">
+        <div class="bar-row">
+          <span class="bar-row-label">Bass</span>
+          <div class="bar-track"><div class="bar-fill" id="bass-bar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label">Treble</span>
+          <div class="bar-track"><div class="bar-fill amber" id="treble-bar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label">Reverb</span>
+          <div class="bar-track"><div class="bar-fill red" id="reverb-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="audio-hint">▶ Click a cell to synthesise<br>its acoustic character</div>
+      <div style="margin-top:10px;color:var(--dim);font-size:10px;">
+        <div style="color:var(--teal);margin-bottom:4px;">Space types:</div>
+        cave · cathedral · forest · dense_forest · open_plains
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ④ INTERFERENCE -->
+<div class="section">
+  <div class="section-title">
+    <span class="num">④</span> Signal Interference Patterns
+    <span class="tag">Deterministic wave superposition</span>
+  </div>
+  <div class="intf-row">
+    <canvas id="intf-canvas" width="512" height="512"></canvas>
+    <div class="intf-controls">
+      <div>
+        <div class="control-label">Source Count</div>
+        <div class="control-value" id="src-count-val">4</div>
+        <input type="range" id="src-count" min="2" max="8" value="4">
+        <div class="source-dots" id="source-dots"></div>
+      </div>
+      <div>
+        <div class="control-label">Animation</div>
+        <button class="btn" id="anim-btn">▶ Animate</button>
+      </div>
+      <div class="intf-value-display">
+        Interference at cursor:<br>
+        <span id="intf-val">—</span>
+      </div>
+      <div style="color:var(--dim);font-size:10px;line-height:1.7;">
+        Colour map:<br>
+        <span style="color:#7B2FBE">■</span> −1.0 &nbsp;
+        <span style="color:#0a0c10">■</span> 0.0 &nbsp;
+        <span style="color:#ffb830">■</span> +1.0
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  ZERO-SPECTRAL CORE ENGINE
+// ═══════════════════════════════════════════════════════════
+
+function positionHash(x, y, z, salt = 0) {
+  // Robust 32-bit integer hash, fully deterministic
+  let a = (salt ^ 0x9e3779b9) | 0;
+  a = Math.imul(a ^ (x | 0), 0x517cc1b7) | 0;
+  a = Math.imul(a ^ (y | 0), 0x27d4eb2f) | 0;
+  a = Math.imul(a ^ (z | 0), 0xb5026f5a) | 0;
+  a ^= (a >>> 16);
+  a = Math.imul(a, 0x45d9f3b) | 0;
+  a ^= (a >>> 16);
+  return a >>> 0;
+}
+
+function h2f(h) { return (h >>> 0) / 0x100000000; }
+
+function spectralFingerprint(rx, ry, seed, bandCount = 8) {
+  const rs = positionHash(rx, ry, 0, seed | 0);
+  const bands = [];
+  for (let b = 0; b < bandCount; b++) {
+    const bs = positionHash(rs, b, 0, 0);
+    const amplitude  = h2f(bs) / Math.pow(2, b);
+    const phase      = h2f(bs >>> 16) * 2 * Math.PI;
+    const wavelength = Math.pow(2, bandCount - b);
+    bands.push([amplitude, phase, wavelength]);
+  }
+  return bands;
+}
+
+function evaluateSpectral(lx, ly, fp) {
+  let value = 0, maxAmp = 0;
+  for (const [amp, phase, wl] of fp) {
+    const freq = 1.0 / wl;
+    value  += amp * Math.sin(2 * Math.PI * freq * lx + phase);
+    value  += amp * Math.cos(2 * Math.PI * freq * ly + phase * 0.7);
+    maxAmp += amp;
+  }
+  return maxAmp > 0 ? value / (maxAmp * 2) : 0; // −0.5 … +0.5
+}
+
+// Cache region fingerprints
+const fpCache = new Map();
+function getFP(rx, ry, seed, bandCount) {
+  const key = `${rx},${ry},${seed},${bandCount}`;
+  if (!fpCache.has(key)) fpCache.set(key, spectralFingerprint(rx, ry, seed, bandCount));
+  return fpCache.get(key);
+}
+
+// ── Biome profile ──
+const BIOMES = ["smooth_plains","rolling_hills","jagged_mountains","fractal_coast"];
+function biomeFingerprint(rx, ry, seed, bandCount = 8) {
+  const rs     = positionHash(rx, ry, 0, seed | 0);
+  const bv     = h2f(rs);
+  const biome  = BIOMES[Math.floor(bv * 4)];
+  const bands  = [];
+  for (let b = 0; b < bandCount; b++) {
+    const bs    = positionHash(rs, b, 0, 0);
+    const phase = h2f(bs >>> 16) * 2 * Math.PI;
+    const wl    = Math.pow(2, bandCount - b);
+    const raw   = h2f(bs);
+    let amp;
+    if      (biome === "smooth_plains")    amp = raw / Math.pow(4, b);
+    else if (biome === "rolling_hills")    amp = raw / Math.pow(2, b);
+    else if (biome === "jagged_mountains") amp = raw * (b / bandCount) / Math.pow(1.5, b);
+    else                                   amp = raw * 0.15;
+    bands.push([amp, phase, wl]);
+  }
+  return { biome, bands };
+}
+
+function biomeFPCached(rx, ry, seed) {
+  const key = `b${rx},${ry},${seed}`;
+  if (!fpCache.has(key)) fpCache.set(key, biomeFingerprint(rx, ry, seed));
+  return fpCache.get(key);
+}
+
+// ── Seam blending ──
+function blendedSpectral(wx, wy, seed, regionSize = 128, bandCount = 8, blendZone = 20) {
+  const rx = Math.floor(wx / regionSize), ry = Math.floor(wy / regionSize);
+  const lx = (wx % regionSize) / regionSize, ly = (wy % regionSize) / regionSize;
+  function smooth(t) { return t * t * (3 - 2 * t); }
+  const bxRaw = (wx % regionSize) / blendZone;
+  const byRaw = (wy % regionSize) / blendZone;
+  const bxEnd = (regionSize - wx % regionSize) / blendZone;
+  const byEnd = (regionSize - wy % regionSize) / blendZone;
+  const wx_ = bxRaw < 1 ? smooth(Math.min(1, bxRaw)) : (bxEnd < 1 ? 1 - smooth(Math.min(1, bxEnd)) : 1);
+  const wy_ = byRaw < 1 ? smooth(Math.min(1, byRaw)) : (byEnd < 1 ? 1 - smooth(Math.min(1, byEnd)) : 1);
+
+  const { bands: fp00 } = biomeFPCached(rx,   ry,   seed);
+  const { bands: fp10 } = biomeFPCached(rx+1, ry,   seed);
+  const { bands: fp01 } = biomeFPCached(rx,   ry+1, seed);
+  const { bands: fp11 } = biomeFPCached(rx+1, ry+1, seed);
+
+  const v00 = evaluateSpectral(lx, ly, fp00);
+  const v10 = evaluateSpectral(lx, ly, fp10);
+  const v01 = evaluateSpectral(lx, ly, fp01);
+  const v11 = evaluateSpectral(lx, ly, fp11);
+  return v00*(1-wx_)*(1-wy_) + v10*wx_*(1-wy_) + v01*(1-wx_)*wy_ + v11*wx_*wy_;
+}
+
+// ── Audio character ──
+function audioCharacter(wx, wy, seed) {
+  const rs = 128;
+  const rx = Math.floor(wx / rs), ry = Math.floor(wy / rs);
+  const lx = (wx % rs) / rs, ly = (wy % rs) / rs;
+  const regionSeed = positionHash(rx, ry, 0, (seed + 9000) | 0);
+  const fp1 = spectralFingerprint(rx, ry, (seed + 9001) | 0, 3);
+  const fp2 = spectralFingerprint(rx, ry, (seed + 9002) | 0, 3);
+  const bass   = h2f(regionSeed) * 0.5 + (evaluateSpectral(lx, ly, fp1) + 0.5) * 0.5;
+  const treble = h2f(regionSeed >>> 16) * 0.5 + (evaluateSpectral(lx, ly, fp2) + 0.5) * 0.5;
+  const reverb = h2f(regionSeed >>> 24);
+  let spaceType;
+  if      (reverb > 0.7) spaceType = bass > 0.5 ? "cave"         : "cathedral";
+  else if (bass   > 0.6) spaceType = treble > 0.4 ? "forest"     : "dense_forest";
+  else                   spaceType = "open_plains";
+  return { spaceType, bass: Math.min(1, Math.max(0, bass)), treble: Math.min(1, Math.max(0, treble)), reverb };
+}
+
+// ── Interference field ──
+function interferenceField(wx, wy, seed, sourceCount, time = 0) {
+  let total = 0;
+  for (let i = 0; i < sourceCount; i++) {
+    const s     = positionHash(i, 0, 0, (seed + 8000) | 0);
+    const sx    = h2f(s) * 512;
+    const sy    = h2f(s >>> 16) * 512;
+    const freq  = 0.01 + h2f(s >>> 24) * 0.09;
+    const dist  = Math.hypot(wx - sx, wy - sy);
+    const phase = h2f(positionHash(i, 0, 0, (seed + 8001) | 0)) * 2 * Math.PI;
+    total += (1.0 / (1.0 + dist * 0.01)) * Math.sin(2 * Math.PI * freq * dist + phase + time);
+  }
+  return total / sourceCount;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COLOR UTILITIES
+// ═══════════════════════════════════════════════════════════
+
+function elevationColor(v) {
+  // v in −0.5…+0.5, normalised to 0–1
+  const t = Math.min(1, Math.max(0, v + 0.5));
+  if (t < 0.25) {
+    const f = t / 0.25;
+    return [lerp(10,50,f), lerp(20,100,f), lerp(80,180,f)];
+  } else if (t < 0.45) {
+    const f = (t - 0.25) / 0.2;
+    return [lerp(50,200,f), lerp(100,180,f), lerp(180,110,f)];
+  } else if (t < 0.65) {
+    const f = (t - 0.45) / 0.2;
+    return [lerp(60,100,f), lerp(130,115,f), lerp(50,60,f)];
+  } else if (t < 0.85) {
+    const f = (t - 0.65) / 0.2;
+    return [lerp(100,160,f), lerp(115,160,f), lerp(60,170,f)];
+  } else {
+    const f = (t - 0.85) / 0.15;
+    return [lerp(160,245,f), lerp(160,250,f), lerp(170,255,f)];
+  }
+}
+
+function biomeColor(biome, height) {
+  const t = Math.min(1, Math.max(0, height + 0.5));
+  const shade = 0.7 + t * 0.6;
+  if      (biome === "smooth_plains")    return [Math.round(95*shade), Math.round(163*shade), Math.round(122*shade)];
+  else if (biome === "rolling_hills")    return [Math.round(122*shade), Math.round(158*shade), Math.round(90*shade)];
+  else if (biome === "jagged_mountains") return [Math.round(120*shade), Math.round(142*shade), Math.round(160*shade)];
+  else                                   return [Math.round(58*shade), Math.round(122*shade), Math.round(158*shade)];
+}
+
+function audioColor(spaceType) {
+  const c = {
+    "cave":         [100, 30, 160],
+    "cathedral":    [60,  60, 180],
+    "forest":       [30, 120,  60],
+    "dense_forest": [20,  80,  40],
+    "open_plains":  [50, 170, 160],
+  };
+  return c[spaceType] || [80, 80, 80];
+}
+
+function interferenceColor(v) {
+  // v in −1…+1
+  if (v < 0) {
+    const t = -v; // 0→1
+    return [Math.round(lerp(10, 123, t)), Math.round(lerp(10, 47, t)), Math.round(lerp(15, 190, t))];
+  } else {
+    const t = v;
+    return [Math.round(lerp(10, 255, t)), Math.round(lerp(10, 184, t)), Math.round(lerp(15, 48, t))];
+  }
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL 1: ADAPTIVE LOD
+// ═══════════════════════════════════════════════════════════
+
+function initLOD() {
+  const grid = document.getElementById('lod-grid');
+  grid.innerHTML = '';
+  for (let lod = 0; lod <= 7; lod++) {
+    const size = 80 + lod * 8; // slightly grow with detail
+    const wrap = document.createElement('div');
+    wrap.className = 'lod-item';
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    canvas.id = `lod-${lod}`;
+    const label = document.createElement('div');
+    label.className = 'lod-label';
+    label.innerHTML = `LOD <span>${lod}</span>`;
+    wrap.appendChild(canvas);
+    wrap.appendChild(label);
+    grid.appendChild(wrap);
+  }
+}
+
+function renderLOD(seed) {
+  const regionSize = 256;
+  const baseX = 100, baseY = 100;
+  fpCache.clear();
+
+  for (let lod = 0; lod <= 7; lod++) {
+    const canvas = document.getElementById(`lod-${lod}`);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(W, H);
+    const bandCount = lod + 1;
+    const fp = spectralFingerprint(
+      Math.floor(baseX / regionSize),
+      Math.floor(baseY / regionSize),
+      seed, bandCount
+    );
+
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const wx = baseX + (px / W) * regionSize * 0.9;
+        const wy = baseY + (py / H) * regionSize * 0.9;
+        const lx = (wx % regionSize) / regionSize;
+        const ly = (wy % regionSize) / regionSize;
+        const v = evaluateSpectral(lx, ly, fp);
+        const [r,g,b] = elevationColor(v);
+        const i = (py * W + px) * 4;
+        img.data[i]   = r; img.data[i+1] = g;
+        img.data[i+2] = b; img.data[i+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL 2: BIOME
+// ═══════════════════════════════════════════════════════════
+
+let biomeImageData = null;
+
+function renderBiome(seed) {
+  const canvas = document.getElementById('biome-canvas');
+  const W = 512, H = 256;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const v = blendedSpectral(px * 2, py * 2, seed, 128, 8, 20);
+      const rx = Math.floor((px * 2) / 128), ry = Math.floor((py * 2) / 128);
+      const { biome } = biomeFPCached(rx, ry, seed);
+      const [r,g,b] = biomeColor(biome, v);
+      const i = (py * W + px) * 4;
+      img.data[i]   = r; img.data[i+1] = g;
+      img.data[i+2] = b; img.data[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  biomeImageData = img;
+}
+
+function initBiomeHover(seed) {
+  const canvas = document.getElementById('biome-canvas');
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const px = Math.floor((e.clientX - rect.left) * scaleX);
+    const py = Math.floor((e.clientY - rect.top) * scaleY);
+    const wx = px * 2, wy = py * 2;
+    const rx = Math.floor(wx / 128), ry = Math.floor(wy / 128);
+    const { biome, bands } = biomeFPCached(rx, ry, seed);
+
+    document.getElementById('biome-name').textContent = biome.replace('_', ' ');
+
+    const maxAmp = Math.max(...bands.map(b => b[0]));
+    const barsEl = document.getElementById('amp-bars');
+    barsEl.innerHTML = '';
+    bands.forEach(([amp], i) => {
+      const pct = maxAmp > 0 ? (amp / maxAmp) * 100 : 0;
+      barsEl.innerHTML += `<div class="amp-row">
+        <span class="amp-row-label">B${i}</span>
+        <div class="amp-bar-track">
+          <div class="amp-bar-fill" style="width:${pct.toFixed(1)}%;background:${i < 3 ? 'var(--teal)' : i < 6 ? 'var(--amber)' : 'var(--red)'}"></div>
+        </div>
+      </div>`;
+    });
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL 3: AUDIO
+// ═══════════════════════════════════════════════════════════
+
+let audioCtx = null;
+
+function renderAudio(seed) {
+  const canvas = document.getElementById('audio-canvas');
+  const W = 512, H = 512;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  // Render at 4px/cell = 128 logical cells
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const wx = px, wy = py;
+      const { spaceType } = audioCharacter(wx, wy, seed);
+      const [r,g,b] = audioColor(spaceType);
+      const i = (py * W + px) * 4;
+      img.data[i]   = r; img.data[i+1] = g;
+      img.data[i+2] = b; img.data[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function initAudioInteraction(seedGetter) {
+  const canvas = document.getElementById('audio-canvas');
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+    const py = Math.floor((e.clientY - rect.top)  * (canvas.height / rect.height));
+    const { spaceType, bass, treble, reverb } = audioCharacter(px, py, seedGetter());
+    document.getElementById('space-type').textContent = spaceType.replace('_', ' ');
+    document.getElementById('bass-bar').style.width    = (bass   * 100).toFixed(1) + '%';
+    document.getElementById('treble-bar').style.width  = (treble * 100).toFixed(1) + '%';
+    document.getElementById('reverb-bar').style.width  = (reverb * 100).toFixed(1) + '%';
+  };
+
+  canvas.onclick = (e) => {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const rect = canvas.getBoundingClientRect();
+    const px = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+    const py = Math.floor((e.clientY - rect.top)  * (canvas.height / rect.height));
+    const { spaceType, bass, treble, reverb } = audioCharacter(px, py, seedGetter());
+    playAudioCharacter(audioCtx, spaceType, bass, treble, reverb);
+  };
+}
+
+function playAudioCharacter(ctx, spaceType, bass, treble, reverb) {
+  const now = ctx.currentTime;
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(0.25, now);
+  masterGain.connect(ctx.destination);
+
+  // Delay/reverb node
+  const delay = ctx.createDelay(2.0);
+  const feedback = ctx.createGain();
+  delay.delayTime.value = reverb * 0.4 + 0.05;
+  feedback.gain.value   = reverb * 0.55;
+  delay.connect(feedback);
+  feedback.connect(delay);
+  delay.connect(masterGain);
+
+  function makeOsc(freq, type, startT, duration, gainVal) {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type      = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, startT);
+    g.gain.linearRampToValueAtTime(gainVal, startT + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, startT + duration);
+    osc.connect(g);
+    g.connect(masterGain);
+    g.connect(delay);
+    osc.start(startT);
+    osc.stop(startT + duration + 0.1);
+  }
+
+  const baseFreq = 80 + bass * 200;
+  if (spaceType === "cave") {
+    makeOsc(baseFreq,       'sine',     now,       1.8, 0.6);
+    makeOsc(baseFreq * 1.5, 'sine',     now + 0.1, 1.2, 0.3);
+    makeOsc(baseFreq * 2,   'triangle', now + 0.2, 1.0, 0.15);
+  } else if (spaceType === "cathedral") {
+    [1, 2, 3, 4, 5].forEach((h, i) =>
+      makeOsc(baseFreq * h, 'sine', now + i*0.05, 2.0, 0.5 / h));
+  } else if (spaceType === "forest") {
+    makeOsc(200 + treble*300, 'sine',     now,       1.0, 0.4);
+    makeOsc(300 + treble*200, 'triangle', now + 0.1, 0.8, 0.25);
+    makeOsc(400,              'sine',     now + 0.3, 0.6, 0.1);
+  } else if (spaceType === "dense_forest") {
+    makeOsc(150 + bass*100, 'sawtooth', now,       0.6, 0.2);
+    makeOsc(200,            'triangle', now + 0.2, 0.8, 0.3);
+  } else { // open_plains
+    makeOsc(440 + treble*200, 'sine', now,       0.5, 0.5);
+    makeOsc(660,              'sine', now + 0.05, 0.3, 0.2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL 4: INTERFERENCE
+// ═══════════════════════════════════════════════════════════
+
+let intfAnimating = false;
+let intfTime = 0;
+let intfRAF = null;
+
+function renderInterference(seed, sourceCount, time = 0) {
+  const canvas = document.getElementById('intf-canvas');
+  const W = 512, H = 512;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const v = interferenceField(px, py, seed, sourceCount, time);
+      let [r,g,b] = interferenceColor(v);
+
+      // Contour lines at ±0.3 and ±0.7
+      const contour = [0.3, 0.7, -0.3, -0.7];
+      for (const c of contour) {
+        if (Math.abs(v - c) < 0.015) { r = 255; g = 255; b = 255; break; }
+      }
+
+      const i = (py * W + px) * 4;
+      img.data[i]   = r; img.data[i+1] = g;
+      img.data[i+2] = b; img.data[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // Draw source positions
+  for (let i = 0; i < sourceCount; i++) {
+    const s  = positionHash(i, 0, 0, (seed + 8000) | 0);
+    const sx = h2f(s) * 512;
+    const sy = h2f(s >>> 16) * 512;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffb830';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function initInterference(seedGetter) {
+  const canvas = document.getElementById('intf-canvas');
+  const slider = document.getElementById('src-count');
+  const countVal = document.getElementById('src-count-val');
+  const animBtn  = document.getElementById('anim-btn');
+  const dots     = document.getElementById('source-dots');
+
+  function updateDots(n) {
+    dots.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('div');
+      d.className = 'source-dot';
+      dots.appendChild(d);
+    }
+  }
+  updateDots(4);
+
+  slider.oninput = () => {
+    const n = parseInt(slider.value);
+    countVal.textContent = n;
+    updateDots(n);
+    if (!intfAnimating) renderInterference(seedGetter(), n, intfTime);
+  };
+
+  animBtn.onclick = () => {
+    intfAnimating = !intfAnimating;
+    animBtn.classList.toggle('active', intfAnimating);
+    animBtn.textContent = intfAnimating ? '■ Stop' : '▶ Animate';
+    if (intfAnimating) {
+      function frame() {
+        if (!intfAnimating) return;
+        intfTime += 0.025;
+        renderInterference(seedGetter(), parseInt(slider.value), intfTime);
+        intfRAF = requestAnimationFrame(frame);
+      }
+      frame();
+    } else {
+      if (intfRAF) cancelAnimationFrame(intfRAF);
+    }
+  };
+
+  canvas.onmousemove = (e) => {
+    const rect  = canvas.getBoundingClientRect();
+    const px    = Math.floor((e.clientX - rect.left) * (canvas.width  / rect.width));
+    const py    = Math.floor((e.clientY - rect.top)  * (canvas.height / rect.height));
+    const v     = interferenceField(px, py, seedGetter(), parseInt(slider.value), intfTime);
+    document.getElementById('intf-val').textContent = v.toFixed(4);
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SEED CONTROL & INIT
+// ═══════════════════════════════════════════════════════════
+
+let currentSeed = 31415926;
+
+function getSeed() { return currentSeed; }
+
+function fullRender() {
+  fpCache.clear();
+  renderLOD(currentSeed);
+  renderBiome(currentSeed);
+  initBiomeHover(currentSeed);
+  renderAudio(currentSeed);
+  if (!intfAnimating) renderInterference(currentSeed, parseInt(document.getElementById('src-count').value), intfTime);
+}
+
+document.getElementById('seed-input').addEventListener('input', function() {
+  const v = parseInt(this.value);
+  if (!isNaN(v) && v >= 0) {
+    currentSeed = v;
+    clearTimeout(window._seedTimer);
+    window._seedTimer = setTimeout(fullRender, 180);
+  }
+});
+
+document.getElementById('rand-btn').onclick = () => {
+  currentSeed = Math.floor(Math.random() * 1e9);
+  document.getElementById('seed-input').value = currentSeed;
+  fullRender();
+};
+
+// Init panels
+initLOD();
+fullRender();
+initAudioInteraction(getSeed);
+initInterference(getSeed);
+</script>
+</body>
+</html>
