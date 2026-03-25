@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroGraph — Topology-is-Seed Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c11;
+    --surface: #111520;
+    --surface2: #181e2a;
+    --border: #252d3e;
+    --border2: #333d52;
+    --accent: #c8a96e;
+    --accent2: #5ba4cf;
+    --accent3: #7ecba1;
+    --text: #cdc8be;
+    --muted: #5c6478;
+    --glow: rgba(200, 169, 110, 0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 12px 24px 0;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d1018 0%, var(--bg) 100%);
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .brand h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .brand .tagline {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 9px 18px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: transparent;
+    transition: all 0.2s;
+    position: relative;
+    top: 1px;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--text); background: var(--surface); }
+
+  .tab.active {
+    color: var(--accent);
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+  }
+
+  /* ── Main ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ctrl-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ctrl-title {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+  }
+
+  .ctrl-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ctrl-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  .ctrl-label .val {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { background: #e8c980; }
+
+  input[type=number], input[type=text] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type=number]:focus, input[type=text]:focus {
+    border-color: var(--accent);
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-rect {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Canvas ── */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(91,164,207,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(200,169,110,0.04) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  /* subtle grid */
+  .canvas-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  svg.graph-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Info bar ── */
+  .info-bar {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    gap: 16px;
+    pointer-events: none;
+  }
+
+  .info-chip {
+    background: rgba(17,21,32,0.85);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--muted);
+    backdrop-filter: blur(4px);
+  }
+
+  .info-chip span { color: var(--accent2); }
+
+  /* ── SVG animation styles ── */
+  .edge-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawEdge 0.5s ease forwards;
+  }
+
+  .node-circle, .node-rect {
+    opacity: 0;
+    animation: popIn 0.3s ease forwards;
+  }
+
+  @keyframes drawEdge {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes popIn {
+    0%  { opacity: 0; transform: scale(0.4); }
+    70% { transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .panel { display: none; }
+  .panel.active { display: flex; flex-direction: column; height: 100%; }
+
+  /* tooltip */
+  .tooltip {
+    position: absolute;
+    background: rgba(10,12,17,0.95);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 10px;
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    max-width: 180px;
+    line-height: 1.6;
+  }
+
+  .tooltip.visible { opacity: 1; }
+
+  .tooltip strong {
+    color: var(--accent);
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>ZeroGraph</h1>
+    <span class="tagline">Topology-is-Seed · Deterministic Procedural Graphs</span>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="dungeon">⚔ Dungeon Wing</div>
+    <div class="tab" data-tab="settlement">🏘 Road Network</div>
+    <div class="tab" data-tab="quest">📜 Quest DAG</div>
+    <div class="tab" data-tab="cave">🪨 Cave System</div>
+  </div>
+</header>
+
+<div class="main" id="mainArea">
+
+  <!-- ═══ DUNGEON ═══ -->
+  <div id="panel-dungeon" class="panel active" style="flex-direction:row;flex:1;overflow:hidden">
+    <div class="controls">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Region</div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Wing X <span class="val" id="d-wx-v">3</span></div>
+          <input type="range" id="d-wx" min="0" max="9" value="3">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Wing Y <span class="val" id="d-wy-v">5</span></div>
+          <input type="range" id="d-wy" min="0" max="9" value="5">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Floor <span class="val" id="d-fl-v">2</span></div>
+          <input type="range" id="d-fl" min="0" max="5" value="2">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Max Rooms <span class="val" id="d-mr-v">10</span></div>
+          <input type="range" id="d-mr" min="4" max="16" value="10">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Seed</div>
+          <input type="number" id="d-seed" value="42">
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Room Types</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-rect" style="background:#6b7280"></div>Empty</div>
+          <div class="legend-item"><div class="legend-rect" style="background:#c0392b"></div>Combat</div>
+          <div class="legend-item"><div class="legend-rect" style="background:#c8a96e"></div>Treasure</div>
+          <div class="legend-item"><div class="legend-rect" style="background:#8b5cf6"></div>Boss</div>
+          <div class="legend-item"><div class="legend-rect" style="background:#0d9488"></div>Shop</div>
+          <div class="legend-item"><div class="legend-rect" style="background:#3b82f6"></div>Puzzle</div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Edge Types</div>
+        <div class="legend">
+          <div class="legend-item"><div style="width:20px;height:2px;background:#5ba4cf;flex-shrink:0"></div>Open door</div>
+          <div class="legend-item"><div style="width:20px;height:2px;background:#c8a96e;border-top:2px dashed #c8a96e;flex-shrink:0"></div>Locked</div>
+          <div class="legend-item"><div style="width:20px;height:2px;background:#e74c3c;opacity:0.5;flex-shrink:0"></div>Forced bridge</div>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-area" id="dungeon-canvas">
+      <svg class="graph-svg" id="dungeon-svg"></svg>
+      <div class="info-bar" id="dungeon-info"></div>
+      <div class="tooltip" id="dungeon-tip"></div>
+    </div>
+  </div>
+
+  <!-- ═══ SETTLEMENT ═══ -->
+  <div id="panel-settlement" class="panel" style="flex-direction:row;flex:1;overflow:hidden">
+    <div class="controls">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Region</div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Region X <span class="val" id="s-rx-v">2</span></div>
+          <input type="range" id="s-rx" min="0" max="9" value="2">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Region Y <span class="val" id="s-ry-v">4</span></div>
+          <input type="range" id="s-ry" min="0" max="9" value="4">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Max Settlements <span class="val" id="s-ms-v">8</span></div>
+          <input type="range" id="s-ms" min="3" max="14" value="8">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Seed</div>
+          <input type="number" id="s-seed" value="77">
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Settlement Types</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#6b7280;width:7px;height:7px"></div>Hamlet</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#7ecba1;width:9px;height:9px"></div>Village</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#5ba4cf;width:12px;height:12px"></div>Town</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#c8a96e;width:15px;height:15px"></div>City</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#c0392b;width:14px;height:14px;border-radius:2px"></div>Fortress ⬡</div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Road Quality</div>
+        <div class="legend">
+          <div class="legend-item"><div style="width:20px;height:3px;background:#7ecba1;flex-shrink:0"></div>Good</div>
+          <div class="legend-item"><div style="width:20px;height:2px;background:#c8a96e;flex-shrink:0"></div>Fair</div>
+          <div class="legend-item"><div style="width:20px;height:1px;background:#c0392b;opacity:0.6;flex-shrink:0"></div>Poor / risky</div>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-area" id="settlement-canvas">
+      <svg class="graph-svg" id="settlement-svg"></svg>
+      <div class="info-bar" id="settlement-info"></div>
+      <div class="tooltip" id="settlement-tip"></div>
+    </div>
+  </div>
+
+  <!-- ═══ QUEST ═══ -->
+  <div id="panel-quest" class="panel" style="flex-direction:row;flex:1;overflow:hidden">
+    <div class="controls">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Quest Origin</div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Origin X <span class="val" id="q-ox-v">1</span></div>
+          <input type="range" id="q-ox" min="0" max="9" value="1">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Origin Y <span class="val" id="q-oy-v">6</span></div>
+          <input type="range" id="q-oy" min="0" max="9" value="6">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Max Objectives <span class="val" id="q-mo-v">7</span></div>
+          <input type="range" id="q-mo" min="3" max="12" value="7">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Seed</div>
+          <input type="number" id="q-seed" value="13">
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Objective Types</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Collect</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Kill</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Escort</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Investigate</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#84cc16"></div>Deliver</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Protect</div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Notes</div>
+        <div style="color:var(--muted);font-size:10px;line-height:1.7">
+          Arrows flow prerequisite → unlocks.<br>
+          Dashed outline = optional.<br>
+          Arrow thickness = dependency strength.
+        </div>
+      </div>
+    </div>
+    <div class="canvas-area" id="quest-canvas">
+      <svg class="graph-svg" id="quest-svg"></svg>
+      <div class="info-bar" id="quest-info"></div>
+      <div class="tooltip" id="quest-tip"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CAVE ═══ -->
+  <div id="panel-cave" class="panel" style="flex-direction:row;flex:1;overflow:hidden">
+    <div class="controls">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Cave Region</div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Cave X <span class="val" id="c-cx-v">7</span></div>
+          <input type="range" id="c-cx" min="0" max="9" value="7">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Cave Y <span class="val" id="c-cy-v">2</span></div>
+          <input type="range" id="c-cy" min="0" max="9" value="2">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Depth <span class="val" id="c-dep-v">3</span></div>
+          <input type="range" id="c-dep" min="0" max="5" value="3">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Max Chambers <span class="val" id="c-mc-v">11</span></div>
+          <input type="range" id="c-mc" min="4" max="16" value="11">
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-label">Seed</div>
+          <input type="number" id="c-seed" value="99">
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Chamber Types</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#78716c"></div>Main passage</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#5ba4cf"></div>Side chamber</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Underground lake</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Crystal pocket</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Dead end</div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Tunnel Types</div>
+        <div class="legend">
+          <div class="legend-item"><div style="width:20px;height:3px;background:rgba(120,113,108,0.6);flex-shrink:0"></div>Natural tunnel</div>
+          <div class="legend-item"><div style="width:20px;height:2px;border-top:2px dashed #e74c3c;opacity:0.6;flex-shrink:0"></div>Forced bridge</div>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-area" id="cave-canvas">
+      <svg class="graph-svg" id="cave-svg"></svg>
+      <div class="info-bar" id="cave-info"></div>
+      <div class="tooltip" id="cave-tip"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  ZERO-HASH — deterministic 32-bit mixing
+// ═══════════════════════════════════════════
+function mix32(h) {
+  h = h >>> 0;
+  h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+function positionHash(x, y, z, salt = 0) {
+  let h = (salt ^ 0x9e3779b9) >>> 0;
+  h = mix32(h ^ (Math.imul((x & 0xFFFF), 0x9e3779b9) >>> 0));
+  h = mix32(h ^ (Math.imul((y & 0xFFFF), 0x85ebca6b) >>> 0));
+  h = mix32(h ^ (Math.imul((z & 0xFFFF), 0xc2b2ae35) >>> 0));
+  return h >>> 0;
+}
+
+function pairHash(ax, ay, bx, by, salt = 0) {
+  let p1 = [ax & 0xFFFF, ay & 0xFFFF];
+  let p2 = [bx & 0xFFFF, by & 0xFFFF];
+  if (p1[0] > p2[0] || (p1[0] === p2[0] && p1[1] > p2[1])) { [p1, p2] = [p2, p1]; }
+  return positionHash(p1[0] ^ p2[0], p1[1] ^ p2[1], (p1[0] + p2[0]) & 0xFFFF, salt) >>> 0;
+}
+
+function h2f(h) { return (h >>> 0) / 0x100000000; }
+
+// ═══════════════════════════════════════════
+//  ZERO-GRAPH core
+// ═══════════════════════════════════════════
+function generateGraph(rx, ry, seedInt, maxNodes = 12, regionSize = 100, edgeThreshold = 0.55) {
+  const regionS = positionHash(rx, ry, 0, seedInt >>> 0);
+  const nNodes = 2 + Math.floor(h2f(regionS) * (maxNodes - 2));
+
+  const nodes = [];
+  for (let i = 0; i < nNodes; i++) {
+    const ns = positionHash(regionS & 0xFFFF, i, 0, 0);
+    const ns2 = positionHash(i, regionS & 0xFFFF, 1, 7);
+    nodes.push({
+      id: i,
+      x:  h2f(ns) * regionSize,
+      y:  h2f(ns2) * regionSize,
+      type: Math.floor(h2f(mix32(ns ^ ns2)) * 6),
+      value: h2f(positionHash(ns, ns2, i, 3))
+    });
+  }
+
+  const edges = [];
+  for (let a = 0; a < nNodes; a++) {
+    for (let b = a + 1; b < nNodes; b++) {
+      const es = pairHash(a, regionS & 0xFFFF, b, (regionS >>> 16) & 0xFFFF, 0);
+      const strength = h2f(es);
+      if (strength > edgeThreshold) {
+        const dx = nodes[a].x - nodes[b].x;
+        const dy = nodes[a].y - nodes[b].y;
+        edges.push({
+          from: a, to: b,
+          strength,
+          distance: Math.sqrt(dx*dx + dy*dy),
+          type: Math.floor(h2f(mix32(es)) * 3)
+        });
+      }
+    }
+  }
+  return { nodes, edges, region: [rx, ry], regionS };
+}
+
+function ensureConnectivity(graph) {
+  const { nodes, edges } = graph;
+  const n = nodes.length;
+  if (n === 0) return graph;
+  const parent = Array.from({length: n}, (_, i) => i);
+  function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  function union(x, y) { parent[find(x)] = find(y); }
+  edges.forEach(e => union(e.from, e.to));
+  for (let i = 0; i < n; i++) {
+    if (find(i) !== find(0)) {
+      let closest = -1, minDist = Infinity;
+      for (let j = 0; j < n; j++) {
+        if (j !== i && find(j) === find(0)) {
+          const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+          if (d < minDist) { minDist = d; closest = j; }
+        }
+      }
+      if (closest >= 0) {
+        edges.push({ from: Math.min(i, closest), to: Math.max(i, closest), strength: 0.5, distance: minDist, type: 0, forced: true });
+        union(i, closest);
+      }
+    }
+  }
+  graph.edges = edges;
+  return graph;
+}
+
+// ═══════════════════════════════════════════
+//  DUNGEON WING
+// ═══════════════════════════════════════════
+const ROOM_TYPES = ['empty','combat','treasure','boss','shop','puzzle'];
+const ROOM_COLORS = { empty:'#6b7280', combat:'#c0392b', treasure:'#c8a96e', boss:'#8b5cf6', shop:'#0d9488', puzzle:'#3b82f6' };
+const ROOM_ICONS = { empty:'○', combat:'⚔', treasure:'◆', boss:'☠', shop:'⊕', puzzle:'⁇' };
+
+function buildDungeon(wx, wy, floor, seedInt, maxRooms) {
+  const wingSeed = positionHash(wx, wy, floor, seedInt >>> 0);
+  let graph = generateGraph(wx, wy, wingSeed, maxRooms, 500, 0.62);
+  graph = ensureConnectivity(graph);
+  const minX = Math.min(...graph.nodes.map(n => n.x));
+  graph.nodes.forEach(n => {
+    const ns = positionHash(wingSeed & 0xFFFF, n.id, floor, 0);
+    n.room_type = ROOM_TYPES[n.type % ROOM_TYPES.length];
+    n.difficulty = +(1.0 + floor * 0.3 + n.value * 0.5).toFixed(1);
+    n.loot_tier = Math.floor(h2f(positionHash(ns, floor, n.id, 1)) * 5);
+    n.is_entrance = (n.x === minX);
+  });
+  graph.edges.forEach(e => {
+    const es = pairHash(e.from, wingSeed & 0xFFFF, e.to, (wingSeed >>> 16) & 0xFFFF, 1);
+    e.has_door = h2f(es) > 0.4;
+    e.locked = h2f(mix32(es)) > 0.78;
+  });
+  return graph;
+}
+
+// ═══════════════════════════════════════════
+//  SETTLEMENT ROAD NETWORK
+// ═══════════════════════════════════════════
+const SETTLEMENT_TYPES = ['hamlet','village','town','city','fortress'];
+const SETTLE_SIZES = { hamlet: 8, village: 11, town: 14, city: 17, fortress: 14 };
+const SETTLE_COLORS = { hamlet:'#6b7280', village:'#7ecba1', town:'#5ba4cf', city:'#c8a96e', fortress:'#c0392b' };
+
+function buildSettlement(rx, ry, seedInt, maxS) {
+  let graph = generateGraph(rx, ry, seedInt >>> 0, maxS, 500, 0.5);
+  graph.nodes.forEach(n => {
+    const ns = positionHash(rx, ry, n.id, (seedInt + 1) >>> 0);
+    n.settlement_type = SETTLEMENT_TYPES[Math.floor(h2f(ns) * 5)];
+    n.population = Math.floor(h2f(mix32(ns)) * 5000);
+    n.fortified = h2f(positionHash(ns, n.id, 0, 2)) > 0.7;
+  });
+  graph.edges.forEach(e => {
+    const es = pairHash(e.from, rx, e.to, ry, (seedInt + 2) >>> 0);
+    e.road_quality = h2f(es);
+    e.bandit_risk = h2f(mix32(es));
+  });
+  return graph;
+}
+
+// ═══════════════════════════════════════════
+//  QUEST DAG
+// ═══════════════════════════════════════════
+const QUEST_TYPES = ['collect','kill','escort','investigate','deliver','protect'];
+const QUEST_COLORS = { collect:'#f59e0b', kill:'#ef4444', escort:'#06b6d4', investigate:'#8b5cf6', deliver:'#84cc16', protect:'#f97316' };
+
+function buildQuestDAG(ox, oy, seedInt, maxObj) {
+  const rs = positionHash(ox, oy, 0, (seedInt + 5000) >>> 0);
+  const nObj = 2 + Math.floor(h2f(rs) * (maxObj - 2));
+  const objectives = [];
+  for (let i = 0; i < nObj; i++) {
+    const os = positionHash(rs & 0xFFFF, i, 0, 0);
+    objectives.push({
+      id: i,
+      type: QUEST_TYPES[Math.floor(h2f(os) * QUEST_TYPES.length)],
+      difficulty: h2f(mix32(os)),
+      optional: h2f(positionHash(os, i, 0, 5)) > 0.75
+    });
+  }
+  const deps = [];
+  for (let a = 0; a < nObj; a++) {
+    for (let b = a + 1; b < nObj; b++) {
+      const ds = positionHash(a, rs & 0xFFFF, b, 0);
+      if (h2f(ds) > 0.65) deps.push({ prerequisite: a, unlocks: b, strength: h2f(mix32(ds)) });
+    }
+  }
+  return { objectives, dependencies: deps };
+}
+
+// ═══════════════════════════════════════════
+//  CAVE SYSTEM
+// ═══════════════════════════════════════════
+const CAVE_TYPES = ['main passage','side chamber','underground lake','crystal pocket','dead end'];
+const CAVE_COLORS = ['#78716c','#5ba4cf','#3b82f6','#a78bfa','#6b7280'];
+
+function buildCave(cx, cy, depth, seedInt, maxC) {
+  const caveSeed = positionHash(cx, cy, depth, seedInt >>> 0);
+  let graph = generateGraph(cx, cy, caveSeed, maxC, 500, 0.42);
+  graph = ensureConnectivity(graph);
+  graph.nodes.forEach(n => {
+    const ns = positionHash(caveSeed & 0xFFFF, n.id, depth, 0);
+    n.cave_type = CAVE_TYPES[Math.floor(h2f(ns) * CAVE_TYPES.length)];
+    n.size = 0.4 + h2f(mix32(ns)) * 0.8;
+  });
+  return graph;
+}
+
+// ═══════════════════════════════════════════
+//  SVG RENDERER
+// ═══════════════════════════════════════════
+const PAD = 60;
+
+function fitCoords(nodes, W, H) {
+  if (nodes.length === 0) return nodes.map(() => ({x: W/2, y: H/2}));
+  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+  return nodes.map(n => ({
+    x: PAD + (n.x - minX) / rangeX * (W - 2*PAD),
+    y: PAD + (n.y - minY) / rangeY * (H - 2*PAD)
+  }));
+}
+
+function renderDungeon(graph, svgEl, tipEl, infoEl) {
+  const W = svgEl.clientWidth || 800, H = svgEl.clientHeight || 600;
+  const coords = fitCoords(graph.nodes, W, H);
+  let html = `<defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+
+  // edges
+  graph.edges.forEach((e, idx) => {
+    const a = coords[e.from], b = coords[e.to];
+    const color = e.forced ? '#e74c3c' : (e.locked ? '#c8a96e' : '#5ba4cf');
+    const dash = e.locked ? '6,4' : (e.forced ? '4,4' : 'none');
+    const delay = idx * 40;
+    html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+      stroke="${color}" stroke-width="${e.forced?1.2:1.8}" stroke-dasharray="${dash}" opacity="${e.forced?0.5:0.7}"
+      class="edge-line" style="animation-delay:${delay}ms"/>`;
+  });
+
+  // nodes
+  graph.nodes.forEach((n, idx) => {
+    const {x, y} = coords[idx];
+    const col = ROOM_COLORS[n.room_type];
+    const icon = ROOM_ICONS[n.room_type];
+    const delay = graph.edges.length * 40 + idx * 50;
+    const glowAttr = n.is_entrance ? 'filter="url(#glow)"' : '';
+    const strokeExtra = n.is_entrance ? `stroke="#c8a96e" stroke-width="2.5"` : `stroke="${col}" stroke-width="1"`;
+    html += `<g class="node-group" data-id="${n.id}" style="cursor:pointer" transform-origin="${x} ${y}">
+      <rect x="${x-22}" y="${y-14}" width="44" height="28" rx="4" fill="${col}" fill-opacity="0.18"
+        ${strokeExtra} ${glowAttr} class="node-rect" style="animation-delay:${delay}ms" opacity="0.9"/>
+      <text x="${x}" y="${y-1}" text-anchor="middle" dominant-baseline="middle"
+        font-size="13" fill="${col}" style="animation-delay:${delay}ms;opacity:0"
+        class="node-circle">${icon}</text>
+      <text x="${x}" y="${y+9}" text-anchor="middle" dominant-baseline="middle"
+        font-size="7" fill="${col}" opacity="0.75" letter-spacing="0.05em"
+        font-family="JetBrains Mono,monospace">${n.room_type.toUpperCase()}</text>
+    </g>`;
+  });
+
+  svgEl.innerHTML = html;
+
+  // tooltips
+  svgEl.querySelectorAll('.node-group').forEach((g, i) => {
+    const n = graph.nodes[i];
+    g.addEventListener('mouseenter', e => {
+      tipEl.innerHTML = `<strong>${n.room_type}</strong>Difficulty: ${n.difficulty}<br>Loot Tier: ${'◆'.repeat(n.loot_tier+1)}<br>${n.is_entrance?'⚑ Entrance':''}`;
+      tipEl.classList.add('visible');
+    });
+    g.addEventListener('mousemove', e => {
+      const rect = svgEl.getBoundingClientRect();
+      tipEl.style.left = (e.clientX - rect.left + 12) + 'px';
+      tipEl.style.top = (e.clientY - rect.top - 10) + 'px';
+    });
+    g.addEventListener('mouseleave', () => tipEl.classList.remove('visible'));
+  });
+
+  infoEl.innerHTML = `<div class="info-chip">Rooms: <span>${graph.nodes.length}</span></div>
+    <div class="info-chip">Corridors: <span>${graph.edges.length}</span></div>
+    <div class="info-chip">Locked: <span>${graph.edges.filter(e=>e.locked).length}</span></div>`;
+}
+
+function renderSettlement(graph, svgEl, tipEl, infoEl) {
+  const W = svgEl.clientWidth || 800, H = svgEl.clientHeight || 600;
+  const coords = fitCoords(graph.nodes, W, H);
+  let html = '';
+
+  graph.edges.forEach((e, idx) => {
+    const a = coords[e.from], b = coords[e.to];
+    const q = e.road_quality;
+    const col = q > 0.66 ? '#7ecba1' : q > 0.33 ? '#c8a96e' : '#c0392b';
+    const w = 1 + q * 2.5;
+    html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+      stroke="${col}" stroke-width="${w}" opacity="${0.35 + q*0.5}"
+      class="edge-line" style="animation-delay:${idx*35}ms"/>`;
+  });
+
+  graph.nodes.forEach((n, idx) => {
+    const {x, y} = coords[idx];
+    const col = SETTLE_COLORS[n.settlement_type];
+    const sz = SETTLE_SIZES[n.settlement_type];
+    const delay = graph.edges.length * 35 + idx * 50;
+    if (n.fortified) {
+      html += `<circle cx="${x}" cy="${y}" r="${sz+5}" fill="none" stroke="${col}" stroke-width="1" opacity="0.3"
+        class="node-circle" style="animation-delay:${delay}ms"/>`;
+    }
+    if (n.settlement_type === 'fortress') {
+      html += `<polygon points="${x},${y-sz} ${x+sz*0.87},${y+sz*0.5} ${x-sz*0.87},${y+sz*0.5}"
+        fill="${col}" fill-opacity="0.25" stroke="${col}" stroke-width="1.5"
+        class="node-circle" style="animation-delay:${delay}ms"/>`;
+    } else {
+      html += `<circle cx="${x}" cy="${y}" r="${sz}" fill="${col}" fill-opacity="0.2" stroke="${col}" stroke-width="1.5"
+        class="node-circle" style="animation-delay:${delay}ms" data-si="${idx}" style="cursor:pointer"/>`;
+    }
+    html += `<text x="${x}" y="${y+sz+10}" text-anchor="middle" font-size="8" fill="${col}" opacity="0.8"
+      font-family="Cinzel,serif" letter-spacing="0.05em">${n.settlement_type.toUpperCase()}</text>`;
+  });
+
+  svgEl.innerHTML = html;
+  infoEl.innerHTML = `<div class="info-chip">Settlements: <span>${graph.nodes.length}</span></div>
+    <div class="info-chip">Roads: <span>${graph.edges.length}</span></div>
+    <div class="info-chip">Fortified: <span>${graph.nodes.filter(n=>n.fortified).length}</span></div>`;
+}
+
+function renderQuestDAG(data, svgEl, tipEl, infoEl) {
+  const W = svgEl.clientWidth || 800, H = svgEl.clientHeight || 600;
+  const n = data.objectives.length;
+  if (n === 0) return;
+
+  // topological layers
+  const inDeg = Array(n).fill(0);
+  data.dependencies.forEach(d => inDeg[d.unlocks]++);
+  const layers = [];
+  const visited = new Set();
+  let queue = data.objectives.filter((_,i) => inDeg[i] === 0).map(o => o.id);
+  while (queue.length) {
+    layers.push([...queue]);
+    const next = [];
+    queue.forEach(id => visited.add(id));
+    data.dependencies.filter(d => queue.includes(d.prerequisite) && !visited.has(d.unlocks))
+      .forEach(d => { if (!next.includes(d.unlocks)) next.push(d.unlocks); });
+    queue = next;
+  }
+  // any not placed
+  data.objectives.forEach(o => { if (!visited.has(o.id)) layers.push([o.id]); });
+
+  const coords = {};
+  const layerH = (H - 2*PAD) / Math.max(layers.length - 1, 1);
+  layers.forEach((layer, li) => {
+    const rowW = (W - 2*PAD) / Math.max(layer.length, 1);
+    layer.forEach((id, ii) => {
+      coords[id] = {
+        x: PAD + rowW * ii + rowW/2,
+        y: PAD + li * layerH
+      };
+    });
+  });
+
+  let html = `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#5ba4cf" opacity="0.7"/></marker></defs>`;
+
+  // edges
+  data.dependencies.forEach((d, idx) => {
+    const a = coords[d.prerequisite], b = coords[d.unlocks];
+    if (!a || !b) return;
+    const w = 1 + d.strength * 3;
+    html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+      stroke="#5ba4cf" stroke-width="${w}" opacity="0.5" marker-end="url(#arrow)"
+      class="edge-line" style="animation-delay:${idx*40}ms"/>`;
+  });
+
+  // nodes
+  data.objectives.forEach((o, idx) => {
+    const {x, y} = coords[o.id];
+    const col = QUEST_COLORS[o.type];
+    const delay = data.dependencies.length * 40 + idx * 50;
+    const dash = o.optional ? '4,3' : 'none';
+    html += `<circle cx="${x}" cy="${y}" r="20" fill="${col}" fill-opacity="0.15"
+      stroke="${col}" stroke-width="2" stroke-dasharray="${dash}"
+      class="node-circle" style="animation-delay:${delay}ms"/>
+    <text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="middle"
+      font-size="9" fill="${col}" font-family="Cinzel,serif" letter-spacing="0.05em"
+      class="node-circle" style="animation-delay:${delay}ms">${o.type.substring(0,3).toUpperCase()}</text>
+    <text x="${x}" y="${y+30}" text-anchor="middle" font-size="8" fill="${col}" opacity="0.7"
+      font-family="JetBrains Mono,monospace">#${o.id}${o.optional?' (opt)':''}</text>`;
+  });
+
+  svgEl.innerHTML = html;
+  infoEl.innerHTML = `<div class="info-chip">Objectives: <span>${n}</span></div>
+    <div class="info-chip">Dependencies: <span>${data.dependencies.length}</span></div>
+    <div class="info-chip">Optional: <span>${data.objectives.filter(o=>o.optional).length}</span></div>`;
+}
+
+function renderCave(graph, svgEl, tipEl, infoEl) {
+  const W = svgEl.clientWidth || 800, H = svgEl.clientHeight || 600;
+  const coords = fitCoords(graph.nodes, W, H);
+  let html = '';
+
+  graph.edges.forEach((e, idx) => {
+    const a = coords[e.from], b = coords[e.to];
+    const w = 1.5 + e.strength * 4;
+    const col = e.forced ? '#e74c3c' : '#78716c';
+    const dash = e.forced ? '5,4' : 'none';
+    html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+      stroke="${col}" stroke-width="${w}" opacity="${e.forced?0.4:0.55}" stroke-dasharray="${dash}"
+      class="edge-line" style="animation-delay:${idx*30}ms"/>`;
+  });
+
+  graph.nodes.forEach((n, idx) => {
+    const {x, y} = coords[idx];
+    const typeIdx = CAVE_TYPES.indexOf(n.cave_type);
+    const col = CAVE_COLORS[typeIdx];
+    const r = 15 + n.size * 20;
+    const delay = graph.edges.length * 30 + idx * 45;
+
+    // blob shape approximation with polygon
+    const pts = 8;
+    const ptArr = [];
+    for (let p = 0; p < pts; p++) {
+      const angle = (p / pts) * Math.PI * 2;
+      const jitter = positionHash(idx, p, 0, 77);
+      const rr = r * (0.7 + h2f(jitter) * 0.5);
+      ptArr.push(`${x + Math.cos(angle)*rr},${y + Math.sin(angle)*rr}`);
+    }
+    html += `<polygon points="${ptArr.join(' ')}" fill="${col}" fill-opacity="0.18"
+      stroke="${col}" stroke-width="1.5" stroke-linejoin="round"
+      class="node-circle" style="animation-delay:${delay}ms"/>`;
+
+    const abbr = {
+      'main passage':'PASS',
+      'side chamber':'SIDE',
+      'underground lake':'LAKE',
+      'crystal pocket':'CRYS',
+      'dead end':'DEAD'
+    }[n.cave_type];
+    html += `<text x="${x}" y="${y+2}" text-anchor="middle" dominant-baseline="middle"
+      font-size="8" fill="${col}" font-family="Cinzel,serif" letter-spacing="0.06em"
+      class="node-circle" style="animation-delay:${delay}ms">${abbr}</text>`;
+  });
+
+  svgEl.innerHTML = html;
+  infoEl.innerHTML = `<div class="info-chip">Chambers: <span>${graph.nodes.length}</span></div>
+    <div class="info-chip">Tunnels: <span>${graph.edges.length}</span></div>
+    <div class="info-chip">Forced: <span>${graph.edges.filter(e=>e.forced).length}</span></div>`;
+}
+
+// ═══════════════════════════════════════════
+//  WIRING
+// ═══════════════════════════════════════════
+function getNum(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+function redrawDungeon() {
+  const g = buildDungeon(getNum('d-wx'), getNum('d-wy'), getNum('d-fl'), getNum('d-seed'), getNum('d-mr'));
+  renderDungeon(g, document.getElementById('dungeon-svg'), document.getElementById('dungeon-tip'), document.getElementById('dungeon-info'));
+}
+
+function redrawSettlement() {
+  const g = buildSettlement(getNum('s-rx'), getNum('s-ry'), getNum('s-seed'), getNum('s-ms'));
+  renderSettlement(g, document.getElementById('settlement-svg'), document.getElementById('settlement-tip'), document.getElementById('settlement-info'));
+}
+
+function redrawQuest() {
+  const d = buildQuestDAG(getNum('q-ox'), getNum('q-oy'), getNum('q-seed'), getNum('q-mo'));
+  renderQuestDAG(d, document.getElementById('quest-svg'), document.getElementById('quest-tip'), document.getElementById('quest-info'));
+}
+
+function redrawCave() {
+  const g = buildCave(getNum('c-cx'), getNum('c-cy'), getNum('c-dep'), getNum('c-seed'), getNum('c-mc'));
+  renderCave(g, document.getElementById('cave-svg'), document.getElementById('cave-tip'), document.getElementById('cave-info'));
+}
+
+// Slider label sync + redraw
+function bindSlider(id, valId, redrawFn) {
+  const el = document.getElementById(id);
+  document.getElementById(valId).textContent = el.value;
+  el.addEventListener('input', () => {
+    document.getElementById(valId).textContent = el.value;
+    redrawFn();
+  });
+}
+
+function bindInput(id, redrawFn) {
+  document.getElementById(id).addEventListener('input', redrawFn);
+}
+
+bindSlider('d-wx', 'd-wx-v', redrawDungeon);
+bindSlider('d-wy', 'd-wy-v', redrawDungeon);
+bindSlider('d-fl', 'd-fl-v', redrawDungeon);
+bindSlider('d-mr', 'd-mr-v', redrawDungeon);
+bindInput('d-seed', redrawDungeon);
+
+bindSlider('s-rx', 's-rx-v', redrawSettlement);
+bindSlider('s-ry', 's-ry-v', redrawSettlement);
+bindSlider('s-ms', 's-ms-v', redrawSettlement);
+bindInput('s-seed', redrawSettlement);
+
+bindSlider('q-ox', 'q-ox-v', redrawQuest);
+bindSlider('q-oy', 'q-oy-v', redrawQuest);
+bindSlider('q-mo', 'q-mo-v', redrawQuest);
+bindInput('q-seed', redrawQuest);
+
+bindSlider('c-cx', 'c-cx-v', redrawCave);
+bindSlider('c-cy', 'c-cy-v', redrawCave);
+bindSlider('c-dep', 'c-dep-v', redrawCave);
+bindSlider('c-mc', 'c-mc-v', redrawCave);
+bindInput('c-seed', redrawCave);
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    // rerender on show for correct dimensions
+    requestAnimationFrame(() => {
+      if (tab.dataset.tab === 'dungeon') redrawDungeon();
+      if (tab.dataset.tab === 'settlement') redrawSettlement();
+      if (tab.dataset.tab === 'quest') redrawQuest();
+      if (tab.dataset.tab === 'cave') redrawCave();
+    });
+  });
+});
+
+// Resize
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.tab.active')?.dataset.tab;
+  if (active === 'dungeon') redrawDungeon();
+  if (active === 'settlement') redrawSettlement();
+  if (active === 'quest') redrawQuest();
+  if (active === 'cave') redrawCave();
+});
+
+// Initial render
+requestAnimationFrame(() => {
+  redrawDungeon();
+  redrawSettlement();
+  redrawQuest();
+  redrawCave();
+});
+</script>
+</body>
+</html>

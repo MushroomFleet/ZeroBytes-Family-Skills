@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Temporal Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #252a35;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #a8ff78;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --font-mono: 'Space Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.015) 2px, rgba(0,229,255,0.015) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,229,255,0.4);
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .badge {
+    font-size: 9px;
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .seed-val { color: var(--accent3); }
+
+  /* Epoch Controls */
+  .epoch-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .epoch-label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    width: 52px;
+    flex-shrink: 0;
+  }
+
+  #epochSlider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: var(--border);
+    outline: none;
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  #epochSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    cursor: pointer;
+    border-radius: 0;
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .epoch-readout {
+    width: 240px;
+    flex-shrink: 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .epoch-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .epoch-unit .val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  .epoch-unit .lbl {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .sep { color: var(--border); font-size: 18px; }
+
+  .season-badge {
+    padding: 3px 10px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-radius: 0;
+  }
+
+  .season-spring  { background: rgba(168,255,120,0.15); color: var(--accent3); border: 1px solid var(--accent3); }
+  .season-summer  { background: rgba(255,214,0,0.12);  color: #ffd600; border: 1px solid #ffd600; }
+  .season-autumn  { background: rgba(255,107,53,0.15); color: var(--accent2); border: 1px solid var(--accent2); }
+  .season-winter  { background: rgba(0,229,255,0.12);  color: var(--accent); border: 1px solid var(--accent); }
+
+  .play-btn {
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 14px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .play-btn:hover {
+    background: rgba(0,229,255,0.1);
+    box-shadow: 0 0 12px rgba(0,229,255,0.2);
+  }
+
+  .play-btn.playing {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(255,107,53,0.1);
+  }
+
+  /* Main grid */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    padding: 0;
+  }
+
+  .panel {
+    background: var(--surface);
+    padding: 16px;
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .panel-title.t2::before { background: var(--accent3); }
+  .panel-title.t3::before { background: var(--accent2); }
+
+  /* Weather Grid */
+  #weatherGrid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 2px;
+  }
+
+  .wtile {
+    aspect-ratio: 1;
+    border-radius: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    cursor: default;
+    transition: opacity 0.1s;
+    overflow: hidden;
+  }
+
+  .wtile .icon { font-size: 9px; line-height: 1; z-index: 2; position: relative; }
+  .wtile .cloud-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(220,230,255,var(--cloud));
+  }
+
+  /* Terrain Grid */
+  #terrainGrid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 2px;
+  }
+
+  .ttile {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    cursor: default;
+    transition: background-color 0.3s;
+  }
+
+  /* NPC Map */
+  #npcMap {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 1px;
+    background: var(--bg);
+  }
+
+  .maptile {
+    aspect-ratio: 1;
+    background: var(--surface2);
+  }
+
+  .maptile.road { background: #1e2228; }
+  .maptile.building { background: #1a1e26; border: 1px solid #252a35; }
+
+  .npc-dot {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 10;
+    transition: left 0.4s ease, top 0.4s ease;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .npc-dot::after {
+    content: attr(data-name);
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 5px;
+    font-size: 8px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+  }
+
+  .npc-dot:hover::after { opacity: 1; }
+
+  /* NPC Table */
+  .npc-table-wrap {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 0 24px 20px;
+  }
+
+  .npc-table-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .npc-table-title::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    display: inline-block;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    text-align: left;
+    padding: 6px 12px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 7px 12px;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(37,42,53,0.5);
+    vertical-align: middle;
+  }
+
+  .npc-name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .npc-dot-sm {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .activity-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    letter-spacing: 0.5px;
+  }
+
+  .coord { color: var(--muted); font-size: 9px; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  .legend-sq {
+    width: 10px; height: 10px;
+    flex-shrink: 0;
+  }
+
+  /* O(1) proof bar */
+  .proof-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .proof-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .proof-val {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--accent3);
+  }
+
+  .proof-lbl {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .proof-sep {
+    width: 1px;
+    height: 30px;
+    background: var(--border);
+  }
+
+  .proof-note {
+    margin-left: auto;
+    font-size: 9px;
+    color: var(--muted);
+    max-width: 300px;
+    line-height: 1.6;
+    text-align: right;
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZERO<span>TEMPORAL</span></div>
+  <div class="badge">O(1) · Deterministic</div>
+  <div class="header-right">
+    WORLD SEED: <span class="seed-val">42</span>
+    &nbsp;·&nbsp;
+    TICK = 1 IN-GAME HOUR
+    &nbsp;·&nbsp;
+    NO STORED STATE
+  </div>
+</header>
+
+<div class="epoch-bar">
+  <div class="epoch-label">EPOCH</div>
+  <input type="range" id="epochSlider" min="0" max="17520" value="4200" step="1">
+  <div class="epoch-readout">
+    <div class="epoch-unit">
+      <div class="val" id="dispYear">1</div>
+      <div class="lbl">Year</div>
+    </div>
+    <div class="sep">·</div>
+    <div class="epoch-unit">
+      <div class="val" id="dispDay">175</div>
+      <div class="lbl">Day</div>
+    </div>
+    <div class="sep">·</div>
+    <div class="epoch-unit">
+      <div class="val" id="dispHour">00</div>
+      <div class="lbl">Hour</div>
+    </div>
+    <div class="season-badge season-summer" id="seasonBadge">SUMMER</div>
+  </div>
+  <button class="play-btn" id="playBtn">▶ PLAY</button>
+</div>
+
+<div class="panels">
+
+  <!-- Weather Panel -->
+  <div class="panel">
+    <div class="panel-title t1">Weather Grid · 12×8</div>
+    <div id="weatherGrid"></div>
+    <div class="legend" id="weatherLegend">
+      <div class="legend-item"><div class="legend-sq" style="background:#1e3a5f"></div>Freezing</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#2a6496"></div>Cold</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#4a9460"></div>Mild</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#c8861a"></div>Warm</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#8a2020"></div>Hot</div>
+      <div class="legend-item">⚡ Storm</div>
+      <div class="legend-item">🌧 Rain</div>
+    </div>
+  </div>
+
+  <!-- Terrain Panel -->
+  <div class="panel">
+    <div class="panel-title t2">Seasonal Terrain · 16×10</div>
+    <div id="terrainGrid"></div>
+    <div class="legend" id="terrainLegend" style="margin-top:10px">
+      <div class="legend-item"><div class="legend-sq" style="background:#1a6fa8"></div>Ocean</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#a8d8f0"></div>Frozen Sea</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#7ab648"></div>Plains</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#e8f4f8"></div>Snow Plains</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#2d6a2d"></div>Forest</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#5b8fa8"></div>Flood Plain</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#6b8a3a"></div>Hills</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#8a7a6a"></div>Mountain</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#f0ece8"></div>Snow Mtn</div>
+    </div>
+  </div>
+
+  <!-- NPC Panel -->
+  <div class="panel">
+    <div class="panel-title t3">NPC Town Map · 20×15</div>
+    <div id="npcMap"></div>
+  </div>
+
+</div>
+
+<!-- NPC Schedule Table -->
+<div class="npc-table-wrap">
+  <div class="npc-table-title">NPC Schedules · Deterministic Daily Routes</div>
+  <table id="npcTable">
+    <thead>
+      <tr>
+        <th>NPC</th>
+        <th>Role</th>
+        <th>Activity</th>
+        <th>Current Location</th>
+        <th>Today's Destination</th>
+        <th>Home</th>
+      </tr>
+    </thead>
+    <tbody id="npcTableBody"></tbody>
+  </table>
+</div>
+
+<!-- O(1) Proof Bar -->
+<div class="proof-bar">
+  <div class="proof-stat">
+    <div class="proof-val" id="epochDisp">4200</div>
+    <div class="proof-lbl">Current Epoch</div>
+  </div>
+  <div class="proof-sep"></div>
+  <div class="proof-stat">
+    <div class="proof-val" id="computeTime">0.12ms</div>
+    <div class="proof-lbl">Compute Time</div>
+  </div>
+  <div class="proof-sep"></div>
+  <div class="proof-stat">
+    <div class="proof-val">0 bytes</div>
+    <div class="proof-lbl">Stored State</div>
+  </div>
+  <div class="proof-sep"></div>
+  <div class="proof-stat">
+    <div class="proof-val">O(1)</div>
+    <div class="proof-lbl">Temporal Access</div>
+  </div>
+  <div class="proof-note">
+    Every value computed by hashing (x, y, z, epoch) as seed.<br>
+    Jump to epoch 17,520 as fast as epoch 0. No simulation. No logs.
+  </div>
+</div>
+
+<script>
+// ─── Zero-Temporal Engine (pure JS, no dependencies) ──────────────────────
+
+const WORLD_SEED = 42;
+const TICKS_PER_DAY = 24;
+const TICKS_PER_YEAR = 8760;
+
+// FNV-1a inspired 32-bit hash — deterministic, fast, no libs
+function fnv32(a, b, c, d) {
+  let h = 2166136261;
+  const vals = [a & 0xFF, (a>>8)&0xFF, (a>>16)&0xFF, (a>>24)&0xFF,
+                b & 0xFF, (b>>8)&0xFF, (b>>16)&0xFF, (b>>24)&0xFF,
+                c & 0xFF, (c>>8)&0xFF, (c>>16)&0xFF, (c>>24)&0xFF,
+                d & 0xFF, (d>>8)&0xFF, (d>>16)&0xFF, (d>>24)&0xFF];
+  for (const v of vals) {
+    h ^= v;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  // extra mixing
+  h ^= h >>> 13;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 16;
+  return h;
+}
+
+function temporalHash(x, y, z, epoch, salt = 0) {
+  return fnv32(x ^ (salt * 2654435761), y ^ (salt * 2246822519), z ^ (salt * 3266489917), epoch ^ (salt * 668265263));
+}
+
+function positionHash(x, y, salt = 0) {
+  return fnv32(x ^ (salt * 2654435761), y ^ (salt * 2246822519), salt ^ 0xDEADBEEF, salt * 668265263);
+}
+
+// Always use the full 32-bit value normalised — never bit-shift before h2f
+function h2f(h) { return (h >>> 0) / 4294967296; }
+
+// Independent second hash for Y coordinates — avoids bit-shift corruption
+function h2fY(h) {
+  // Mix the hash differently to get an independent Y value
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  return (h >>> 0) / 4294967296;
+}
+
+// Smooth noise via bilinear interpolation of 4 hashed corners
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+function coherentValue(fx, fy, seed) {
+  let value = 0, amp = 1, freq = 1, maxAmp = 0;
+  for (let o = 0; o < 4; o++) {
+    const xi = Math.floor(fx * freq), yi = Math.floor(fy * freq);
+    const sx = smoothstep(((fx * freq) % 1 + 1) % 1), sy = smoothstep(((fy * freq) % 1 + 1) % 1);
+    const n00 = h2f(positionHash(xi,   yi,   seed + o * 1000)) * 2 - 1;
+    const n10 = h2f(positionHash(xi+1, yi,   seed + o * 1000)) * 2 - 1;
+    const n01 = h2f(positionHash(xi,   yi+1, seed + o * 1000)) * 2 - 1;
+    const n11 = h2f(positionHash(xi+1, yi+1, seed + o * 1000)) * 2 - 1;
+    const nx0 = n00*(1-sx)+n10*sx, nx1 = n01*(1-sx)+n11*sx;
+    value += amp * (nx0*(1-sy)+nx1*sy);
+    maxAmp += amp; amp *= 0.5; freq *= 2;
+  }
+  return value / maxAmp;
+}
+
+function seasonalOffset(epoch) {
+  return Math.sin((epoch % TICKS_PER_YEAR) / TICKS_PER_YEAR * 2 * Math.PI);
+}
+
+function getSeason(epoch) {
+  const phase = (epoch % TICKS_PER_YEAR) / TICKS_PER_YEAR;
+  if (phase < 0.25) return 'spring';
+  if (phase < 0.50) return 'summer';
+  if (phase < 0.75) return 'autumn';
+  return 'winter';
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────
+
+function weather(x, y, epoch) {
+  const baseTemp     = coherentValue(x * 0.14, y * 0.14, WORLD_SEED);
+  const baseMoisture = coherentValue(x * 0.14, y * 0.14, WORLD_SEED + 500);
+  const seasonPhase  = seasonalOffset(epoch);
+
+  // Storm: chunk tiles into 3×2 groups, change every 2 days — use separate x/y salts
+  const stormEpoch = (epoch / (TICKS_PER_DAY * 2)) | 0;
+  const stormX = (x / 3) | 0, stormY = (y / 2) | 0;
+  const stormH = temporalHash(stormX, stormY, 7, stormEpoch, WORLD_SEED + 100);
+  const stormVal = h2f(stormH);
+
+  // Daily cloud/rain: chunk 2×2, change each day
+  const dailyEpoch = (epoch / TICKS_PER_DAY) | 0;
+  const dailyH = temporalHash((x / 2) | 0, (y / 2) | 0, 3, dailyEpoch, WORLD_SEED + 200);
+  const dailyVal = h2f(dailyH);
+
+  const temp = baseTemp + 0.35 * seasonPhase + 0.06 * (h2f(temporalHash(x, y, 1, epoch, WORLD_SEED + 9)) - 0.5);
+  const cloudCover   = Math.min(1, Math.max(0, dailyVal * 0.6 + baseMoisture * 0.35));
+  const stormActive  = stormVal > 0.78 && baseMoisture > 0.3;
+  const precipitation = Math.max(0, cloudCover - 0.45) * baseMoisture;
+  return { temp, cloudCover, stormActive, precipitation, baseMoisture };
+}
+
+function tempToColor(t) {
+  // t in [-1, 1]
+  const clamped = Math.max(-1, Math.min(1, t));
+  const norm = (clamped + 1) / 2;
+  // cold: #1e3a5f → cool: #2a6496 → mild: #4a9460 → warm: #c8861a → hot: #8a2020
+  const stops = [
+    [0.00, [30, 58, 95]],
+    [0.25, [42, 100, 150]],
+    [0.50, [74, 148, 96]],
+    [0.75, [200, 134, 26]],
+    [1.00, [138, 32, 32]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i], [t1, c1] = stops[i+1];
+    if (norm >= t0 && norm <= t1) {
+      const f = (norm - t0) / (t1 - t0);
+      const r = Math.round(c0[0] + (c1[0]-c0[0])*f);
+      const g = Math.round(c0[1] + (c1[1]-c0[1])*f);
+      const b = Math.round(c0[2] + (c1[2]-c0[2])*f);
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+  return '#4a9460';
+}
+
+// ── Terrain ───────────────────────────────────────────────────────────────
+
+const biomeColors = {
+  ocean:         '#1a6fa8',
+  frozen_sea:    '#a8d8f0',
+  plains:        '#7ab648',
+  snow_plains:   '#d8eef4',
+  forest:        '#2d6a2d',
+  flood_plain:   '#5b8fa8',
+  hills:         '#6b8a3a',
+  snow_hills:    '#bbc8b8',
+  mountain:      '#8a7a6a',
+  snow_mountain: '#ede8e4',
+};
+
+const biomeEmoji = {
+  ocean:'🌊', frozen_sea:'🧊', plains:'🌾', snow_plains:'❄', forest:'🌲',
+  flood_plain:'💧', hills:'🏔', snow_hills:'⛄', mountain:'🗻', snow_mountain:'🏔'
+};
+
+function terrainState(x, y, epoch) {
+  const elevation = coherentValue(x * 0.1, y * 0.1, WORLD_SEED + 1000);
+  const moisture  = coherentValue(x * 0.1, y * 0.1, WORLD_SEED + 2000);
+  const sOff      = seasonalOffset(epoch);
+  const isWinter  = sOff < -0.45;
+  const isSpring  = sOff > 0.3 && moisture > 0.55;
+
+  let biome;
+  if (elevation < -0.35)                            biome = isWinter ? 'frozen_sea'    : 'ocean';
+  else if (elevation < -0.05 && isSpring)           biome = 'flood_plain';
+  else if (elevation < 0.1)                         biome = isWinter ? 'snow_plains'   : (moisture > 0.35 ? 'forest' : 'plains');
+  else if (elevation < 0.3)                         biome = isWinter ? 'snow_hills'    : 'hills';
+  else                                              biome = isWinter ? 'snow_mountain' : 'mountain';
+
+  return { biome, elevation, moisture };
+}
+
+// ── NPC ───────────────────────────────────────────────────────────────────
+
+const NPCS = [
+  { id: 1, name: 'Aldric',  role: 'Blacksmith', color: '#ff6b35' },
+  { id: 2, name: 'Mira',    role: 'Herbalist',  color: '#a8ff78' },
+  { id: 3, name: 'Tor',     role: 'Town Guard', color: '#00e5ff' },
+  { id: 4, name: 'Elise',   role: 'Merchant',   color: '#ffd600' },
+  { id: 5, name: 'Brennan', role: 'Farmer',     color: '#b388ff' },
+  { id: 6, name: 'Syla',    role: 'Priestess',  color: '#f48fb1' },
+];
+
+const MAP_W = 20, MAP_H = 15;
+
+function npcSchedule(npc, epoch) {
+  const tod      = epoch % TICKS_PER_DAY;
+  const dayIdx   = (epoch / TICKS_PER_DAY) | 0;
+
+  // Use fully independent hashes for X and Y — never bit-shift before h2f
+  const homeHX = positionHash(npc.id * 37, 0,         WORLD_SEED + 300);
+  const homeHY = positionHash(npc.id * 37, npc.id * 53, WORLD_SEED + 301);
+  const home = {
+    x: (h2f(homeHX) * (MAP_W - 2) + 1) | 0,
+    y: (h2f(homeHY) * (MAP_H - 2) + 1) | 0,
+  };
+
+  const dayHX = temporalHash(npc.id * 37, 0,         dayIdx, 0, WORLD_SEED + 400);
+  const dayHY = temporalHash(npc.id * 37, npc.id * 53, dayIdx, 0, WORLD_SEED + 401);
+  const dest = {
+    x: (h2f(dayHX) * (MAP_W - 2) + 1) | 0,
+    y: (h2f(dayHY) * (MAP_H - 2) + 1) | 0,
+  };
+
+  const errandH = temporalHash(npc.id * 37, 99, dayIdx, 0, WORLD_SEED + 402);
+  const errands = ['Market','Temple','Tavern','Fields','Workshop'];
+  const errand = errands[(h2f(errandH) * 5) | 0];
+
+  function lerp(a, b, t) {
+    return { x: Math.round(a.x + (b.x - a.x) * t), y: Math.round(a.y + (b.y - a.y) * t) };
+  }
+
+  let activity, location;
+  if      (tod < 6)  { activity = 'Sleeping';        location = home; }
+  else if (tod < 8)  { activity = 'Morning Routine'; location = home; }
+  else if (tod < 12) { activity = errand;             location = lerp(home, dest, (tod-8)/4); }
+  else if (tod < 17) { activity = errand;             location = dest; }
+  else if (tod < 20) { activity = 'Returning';        location = lerp(dest, home, (tod-17)/3); }
+  else               { activity = 'Evening';          location = home; }
+
+  return { activity, location, home, dest, errand };
+}
+
+// ─── DOM Building ─────────────────────────────────────────────────────────
+
+const weatherGrid = document.getElementById('weatherGrid');
+const terrainGrid = document.getElementById('terrainGrid');
+const npcMapEl    = document.getElementById('npcMap');
+const npcBody     = document.getElementById('npcTableBody');
+
+// Build weather tiles
+const wTiles = [];
+for (let y = 0; y < 8; y++) {
+  for (let x = 0; x < 12; x++) {
+    const d = document.createElement('div');
+    d.className = 'wtile';
+    d.innerHTML = `<div class="cloud-overlay" style="--cloud:0"></div><span class="icon"></span>`;
+    weatherGrid.appendChild(d);
+    wTiles.push({ el: d, x, y });
+  }
+}
+
+// Build terrain tiles
+const tTiles = [];
+for (let y = 0; y < 10; y++) {
+  for (let x = 0; x < 16; x++) {
+    const d = document.createElement('div');
+    d.className = 'ttile';
+    terrainGrid.appendChild(d);
+    tTiles.push({ el: d, x, y });
+  }
+}
+
+// Build NPC map tiles
+for (let y = 0; y < MAP_H; y++) {
+  for (let x = 0; x < MAP_W; x++) {
+    const d = document.createElement('div');
+    // simple town layout using position hash for buildings/roads
+    const v = h2f(positionHash(x * 3, y * 3, WORLD_SEED + 9999));
+    d.className = 'maptile' + (v > 0.75 ? ' building' : v > 0.55 ? ' road' : '');
+    npcMapEl.appendChild(d);
+  }
+}
+
+// Build NPC dots
+const npcDots = {};
+NPCS.forEach(npc => {
+  const dot = document.createElement('div');
+  dot.className = 'npc-dot';
+  dot.style.color = npc.color;
+  dot.style.background = npc.color;
+  dot.setAttribute('data-name', npc.name);
+  npcMapEl.appendChild(dot);
+  npcDots[npc.id] = dot;
+});
+
+// Build NPC table rows
+NPCS.forEach(npc => {
+  const tr = document.createElement('tr');
+  tr.id = `npc-row-${npc.id}`;
+  tr.innerHTML = `
+    <td><div class="npc-name"><div class="npc-dot-sm" style="background:${npc.color};box-shadow:0 0 5px ${npc.color}"></div>${npc.name}</div></td>
+    <td style="color:var(--muted)">${npc.role}</td>
+    <td><span class="activity-badge" id="act-${npc.id}">—</span></td>
+    <td class="coord" id="loc-${npc.id}">—</td>
+    <td class="coord" id="dest-${npc.id}">—</td>
+    <td class="coord" id="home-${npc.id}">—</td>
+  `;
+  npcBody.appendChild(tr);
+});
+
+// ─── Render ────────────────────────────────────────────────────────────────
+
+function render(epoch) {
+  const t0 = performance.now();
+
+  // Epoch display
+  const year  = Math.floor(epoch / TICKS_PER_YEAR) + 1;
+  const dayOfYear = Math.floor((epoch % TICKS_PER_YEAR) / TICKS_PER_DAY) + 1;
+  const hour  = epoch % TICKS_PER_DAY;
+  document.getElementById('dispYear').textContent = year;
+  document.getElementById('dispDay').textContent = String(dayOfYear).padStart(3,' ');
+  document.getElementById('dispHour').textContent = String(hour).padStart(2,'0');
+  document.getElementById('epochDisp').textContent = epoch;
+
+  const season = getSeason(epoch);
+  const sb = document.getElementById('seasonBadge');
+  sb.textContent = season.toUpperCase();
+  sb.className = 'season-badge season-' + season;
+
+  // Weather grid
+  wTiles.forEach(({ el, x, y }) => {
+    const w = weather(x, y, epoch);
+    el.style.background = tempToColor(w.temp);
+    el.querySelector('.cloud-overlay').style.setProperty('--cloud', (w.cloudCover * 0.55).toFixed(2));
+    const icon = el.querySelector('.icon');
+    if (w.stormActive) icon.textContent = '⚡';
+    else if (w.precipitation > 0.15) icon.textContent = '🌧';
+    else icon.textContent = '';
+  });
+
+  // Terrain grid
+  tTiles.forEach(({ el, x, y }) => {
+    const t = terrainState(x, y, epoch);
+    el.style.background = biomeColors[t.biome] || '#333';
+    el.textContent = biomeEmoji[t.biome] || '';
+    el.style.fontSize = '7px';
+  });
+
+  // NPC map & table
+  const mapRect = npcMapEl.getBoundingClientRect();
+  const cellW = mapRect.width  / MAP_W;
+  const cellH = mapRect.height / MAP_H;
+
+  NPCS.forEach(npc => {
+    const sched = npcSchedule(npc, epoch);
+    const dot = npcDots[npc.id];
+    const px = (sched.location.x + 0.5) / MAP_W * 100;
+    const py = (sched.location.y + 0.5) / MAP_H * 100;
+    dot.style.left = px + '%';
+    dot.style.top  = py + '%';
+
+    document.getElementById(`act-${npc.id}`).textContent = sched.activity;
+    document.getElementById(`loc-${npc.id}`).textContent = `(${sched.location.x}, ${sched.location.y})`;
+    document.getElementById(`dest-${npc.id}`).textContent = `${sched.errand} (${sched.dest.x},${sched.dest.y})`;
+    document.getElementById(`home-${npc.id}`).textContent = `(${sched.home.x}, ${sched.home.y})`;
+  });
+
+  const elapsed = (performance.now() - t0).toFixed(2);
+  document.getElementById('computeTime').textContent = elapsed + 'ms';
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────
+
+const slider = document.getElementById('epochSlider');
+let playing = false, animId = null;
+
+slider.addEventListener('input', () => render(+slider.value));
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  playing = !playing;
+  const btn = document.getElementById('playBtn');
+  if (playing) {
+    btn.textContent = '⏸ PAUSE';
+    btn.classList.add('playing');
+    let epoch = +slider.value;
+    function tick() {
+      epoch = (epoch + 1) % (+slider.max + 1);
+      slider.value = epoch;
+      render(epoch);
+      if (playing) animId = requestAnimationFrame(() => setTimeout(tick, 60));
+    }
+    tick();
+  } else {
+    btn.textContent = '▶ PLAY';
+    btn.classList.remove('playing');
+    if (animId) cancelAnimationFrame(animId);
+  }
+});
+
+// Initial render
+render(+slider.value);
+</script>
+</body>
+</html>

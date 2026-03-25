@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Causal · Chain-is-Seed History Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=JetBrains+Mono:wght@300;400;600&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --obsidian: #07070d;
+    --deep: #0e0e18;
+    --panel: #12121f;
+    --border: #2a2a42;
+    --amber: #c8870a;
+    --gold: #e8d5a0;
+    --gold-dim: #8b7d5a;
+    --collapse: #8b1a1a;
+    --golden: #1a6b3a;
+    --plague: #5a3a6b;
+    --invasion: #6b2a1a;
+    --expansion: #1a4a6b;
+    --founding: #2a5a3a;
+    --civil: #6b4a1a;
+    --reform: #1a5a5a;
+    --revival: #3a5a1a;
+    --text: #c8c0a8;
+    --text-dim: #5a5550;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Cinzel', serif;
+    --body: 'Crimson Pro', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--obsidian);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: linear-gradient(180deg, rgba(200,135,10,0.06) 0%, transparent 100%);
+  }
+
+  header h1 {
+    font-family: var(--serif);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--amber);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  header .sub {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .badge-o1 {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    background: rgba(200,135,10,0.12);
+    border: 1px solid rgba(200,135,10,0.35);
+    color: var(--amber);
+    padding: 3px 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - 60px);
+  }
+
+  .panel {
+    border-right: 1px solid var(--border);
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-family: var(--serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--amber);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title .glyph { font-size: 0.9rem; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ctrl-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  input[type="number"], input[type="text"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--amber); }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--amber);
+    cursor: pointer;
+  }
+
+  .name-display {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.06em;
+    min-height: 28px;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: rgba(200,135,10,0.15); }
+  .btn:active { background: rgba(200,135,10,0.25); }
+  .btn.secondary { border-color: var(--border); color: var(--text-dim); }
+  .btn.secondary:hover { border-color: var(--gold-dim); color: var(--text); }
+
+  .jump-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .jump-row input { flex: 1; }
+
+  /* Timeline strip */
+  .timeline-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .era-card {
+    flex: 0 0 auto;
+    width: 88px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 8px 8px 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    animation: slideIn 0.25s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .era-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .era-card.current { border-color: var(--amber); }
+  .era-card.current::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(200,135,10,0.06);
+    pointer-events: none;
+  }
+
+  .era-card:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+
+  .era-num {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .era-glyph { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+
+  .era-type {
+    font-family: var(--mono);
+    font-size: 0.52rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .era-bar {
+    height: 2px;
+    background: var(--border);
+    margin-top: 5px;
+  }
+
+  .era-bar-fill {
+    height: 100%;
+    transition: width 0.3s;
+  }
+
+  .era-lasting {
+    font-family: var(--mono);
+    font-size: 0.48rem;
+    color: var(--amber);
+    margin-top: 3px;
+  }
+
+  /* Event type colours */
+  .ev-founding    { color: #4a9a6a; } .ev-founding::before    { background: #1a6b3a; }
+  .ev-expansion   { color: #4a7aaa; } .ev-expansion::before   { background: #1a4a6b; }
+  .ev-civil_war   { color: #aaa04a; } .ev-civil_war::before   { background: #6b4a1a; }
+  .ev-golden_age  { color: #c8870a; } .ev-golden_age::before  { background: #8b6000; }
+  .ev-plague      { color: #8a5aaa; } .ev-plague::before      { background: #5a3a6b; }
+  .ev-invasion    { color: #aa5a4a; } .ev-invasion::before    { background: #6b2a1a; }
+  .ev-reform      { color: #4aaaaa; } .ev-reform::before      { background: #1a5a5a; }
+  .ev-collapse    { color: #aa4444; } .ev-collapse::before    { background: #6b1a1a; }
+  .ev-revival     { color: #7aaa4a; } .ev-revival::before     { background: #3a5a1a; }
+
+  /* Detail panel */
+  .detail-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .detail-card::before {
+    content: 'CURRENT ERA';
+    position: absolute;
+    top: -7px; left: 12px;
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    background: var(--panel);
+    padding: 0 6px;
+  }
+
+  .detail-era-num {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+
+  .detail-event-name {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    margin-bottom: 8px;
+  }
+
+  .detail-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .detail-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-stat .key {
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .detail-stat .val {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--gold);
+  }
+
+  /* Fork panel */
+  .fork-panel {
+    display: none;
+    border: 1px solid rgba(200,135,10,0.3);
+    background: rgba(200,135,10,0.04);
+    padding: 12px 14px;
+    gap: 10px;
+    flex-direction: column;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .fork-panel.active { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .fork-title {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .fork-branches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .fork-branch {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 8px 10px;
+  }
+
+  .fork-branch-label {
+    font-family: var(--mono);
+    font-size: 0.52rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  /* Genetic demo */
+  .sparkline-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 8px;
+    position: relative;
+  }
+
+  .sparkline-wrap::before {
+    content: 'FITNESS TRAJECTORY';
+    position: absolute;
+    top: -7px; left: 10px;
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    background: var(--panel);
+    padding: 0 5px;
+  }
+
+  canvas { display: block; }
+
+  .gen-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 8px 10px;
+    flex: 0 0 auto;
+    width: 82px;
+    animation: slideIn 0.2s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gen-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .gen-card.split-event { border-color: var(--amber); }
+
+  .gen-num {
+    font-family: var(--mono);
+    font-size: 0.52rem;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+  }
+
+  .gen-mutation {
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.03em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .gen-fitness {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    margin-top: 5px;
+    font-weight: 600;
+  }
+
+  .gen-dom {
+    font-family: var(--mono);
+    font-size: 0.45rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .split-badge {
+    font-family: var(--mono);
+    font-size: 0.45rem;
+    color: var(--amber);
+    border: 1px solid rgba(200,135,10,0.4);
+    padding: 1px 4px;
+    margin-top: 4px;
+    display: inline-block;
+  }
+
+  /* Mutation colours */
+  .mut-beneficial_metabolism { color: #4a9a6a; } .mut-beneficial_metabolism::before { background: #1a6b3a; }
+  .mut-neutral_coloration     { color: #7a7a9a; } .mut-neutral_coloration::before     { background: #3a3a6b; }
+  .mut-harmful_immunity       { color: #aa4444; } .mut-harmful_immunity::before       { background: #6b1a1a; }
+  .mut-beneficial_size        { color: #4a7aaa; } .mut-beneficial_size::before        { background: #1a4a6b; }
+  .mut-neutral_behaviour      { color: #7a7a9a; } .mut-neutral_behaviour::before      { background: #3a3a6b; }
+  .mut-beneficial_cognition   { color: #c8870a; } .mut-beneficial_cognition::before   { background: #8b6000; }
+  .mut-harmful_reproduction   { color: #8a5aaa; } .mut-harmful_reproduction::before   { background: #5a3a6b; }
+  .mut-neutral_lifespan       { color: #7a7a9a; } .mut-neutral_lifespan::before       { background: #3a3a6b; }
+
+  /* Compare panel */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .compare-col-title {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  /* Benchmark panel */
+  .bench-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    line-height: 1.8;
+  }
+
+  .bench-panel .title {
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .bench-row { display: flex; gap: 16px; }
+  .bench-key { color: var(--text-dim); flex: 0 0 160px; }
+  .bench-val { color: #4aaa6a; }
+  .bench-pass { color: #4aaa6a; }
+  .bench-label { color: var(--text-dim); font-size: 0.52rem; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 900px) {
+    .demo-grid { grid-template-columns: 1fr; }
+    .panel { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Zero-Causal</h1>
+  <span class="sub">Chain-is-Seed · Deterministic Causal History Engine</span>
+  <span class="badge-o1">⚡ O(1) DEPTH ACCESS</span>
+</header>
+
+<div class="demo-grid">
+
+  <!-- ═══════════════════ CIVILISATION PANEL ═══════════════════ -->
+  <div class="panel" id="civPanel">
+    <div class="panel-title">
+      <span class="glyph">🏛</span> Civilisation History
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-group">
+        <label>World Seed</label>
+        <input type="number" id="civWorldSeed" value="42" min="0" max="9999">
+      </div>
+      <div class="ctrl-group">
+        <label>City X</label>
+        <input type="number" id="civX" value="7" min="-999" max="999">
+      </div>
+      <div class="ctrl-group">
+        <label>City Y</label>
+        <input type="number" id="civY" value="3" min="-999" max="999">
+      </div>
+      <div class="ctrl-group">
+        <label>City Name</label>
+        <div class="name-display" id="civName">—</div>
+      </div>
+    </div>
+
+    <div class="ctrl-group full">
+      <label>Browse Era: <span id="civEraLabel">0</span> – <span id="civEraEndLabel">12</span></label>
+      <input type="range" id="civSlider" min="0" max="200" value="0">
+    </div>
+
+    <div class="jump-row">
+      <div class="ctrl-group" style="flex:1">
+        <label>Jump to any Era (O(1))</label>
+        <input type="number" id="civJump" value="0" min="0" max="10000" placeholder="e.g. 500">
+      </div>
+      <button class="btn" onclick="civJump()">JUMP</button>
+      <button class="btn secondary" onclick="civFork()">⑂ FORK</button>
+    </div>
+
+    <div class="section-label">Timeline</div>
+    <div class="timeline-strip" id="civTimeline"></div>
+
+    <div class="detail-card" id="civDetail"></div>
+
+    <div class="fork-panel" id="civForkPanel">
+      <div class="fork-title">⑂ Alternate History Fork at Era <span id="forkEraLabel">—</span></div>
+      <div class="fork-branches" id="forkBranches"></div>
+    </div>
+
+    <div class="bench-panel" id="civBench">
+      <div class="title">⚡ O(1) Verification</div>
+      <div id="civBenchRows"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ GENETIC PANEL ═══════════════════ -->
+  <div class="panel" id="genPanel">
+    <div class="panel-title">
+      <span class="glyph">🧬</span> Genetic Lineage
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-group">
+        <label>World Seed</label>
+        <input type="number" id="genWorldSeed" value="42" min="0" max="9999">
+      </div>
+      <div class="ctrl-group">
+        <label>Species X</label>
+        <input type="number" id="genX" value="2" min="-999" max="999">
+      </div>
+      <div class="ctrl-group">
+        <label>Species Y</label>
+        <input type="number" id="genY" value="9" min="-999" max="999">
+      </div>
+      <div class="ctrl-group">
+        <label>Species Name</label>
+        <div class="name-display" id="genName">—</div>
+      </div>
+    </div>
+
+    <div class="jump-row">
+      <div class="ctrl-group" style="flex:1">
+        <label>Jump to any Generation (O(1))</label>
+        <input type="number" id="genJump" value="0" min="0" max="100000" placeholder="e.g. 10000">
+      </div>
+      <button class="btn" onclick="genJump()">JUMP</button>
+    </div>
+
+    <div class="section-label">Generation Strip</div>
+    <div class="timeline-strip" id="genTimeline"></div>
+
+    <div class="sparkline-wrap">
+      <canvas id="sparkCanvas" height="70" width="400"></canvas>
+    </div>
+
+    <div class="section-label">Compare Two Lineages</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <div class="compare-col-title">Lineage A (current)</div>
+        <div id="compareA" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+      <div>
+        <div class="compare-col-title">Lineage B <span style="font-family:var(--mono);font-size:0.48rem;">(X+3, Y+1)</span></div>
+        <div id="compareB" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+    </div>
+
+    <div class="bench-panel" id="genBench">
+      <div class="title">⚡ O(1) Verification</div>
+      <div id="genBenchRows"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  ZERO-CAUSAL HASH ENGINE  (xxhash32 inline, no external deps)
+// ═══════════════════════════════════════════════════════════════
+
+const PRIME1 = 0x9E3779B1 >>> 0;
+const PRIME2 = 0x85EBCA77 >>> 0;
+const PRIME3 = 0xC2B2AE3D >>> 0;
+const PRIME4 = 0x27D4EB2F >>> 0;
+const PRIME5 = 0x165667B1 >>> 0;
+
+function rotl32(val, bits) {
+  return ((val << bits) | (val >>> (32 - bits))) >>> 0;
+}
+
+function xxhash32Ints(arr, seed) {
+  // arr: array of uint32 values
+  seed = seed >>> 0;
+  let h32;
+  let i = 0;
+  const len = arr.length;
+
+  if (len >= 4) {
+    let v1 = (seed + PRIME1 + PRIME2) >>> 0;
+    let v2 = (seed + PRIME2) >>> 0;
+    let v3 = seed >>> 0;
+    let v4 = (seed - PRIME1) >>> 0;
+
+    while (i + 3 < len) {
+      v1 = (rotl32(Math.imul(v1, PRIME2) + arr[i]   >>> 0, 13) * PRIME1) >>> 0;
+      v2 = (rotl32(Math.imul(v2, PRIME2) + arr[i+1] >>> 0, 13) * PRIME1) >>> 0;
+      v3 = (rotl32(Math.imul(v3, PRIME2) + arr[i+2] >>> 0, 13) * PRIME1) >>> 0;
+      v4 = (rotl32(Math.imul(v4, PRIME2) + arr[i+3] >>> 0, 13) * PRIME1) >>> 0;
+      i += 4;
+    }
+
+    h32 = (rotl32(v1, 1) + rotl32(v2, 7) + rotl32(v3, 12) + rotl32(v4, 18)) >>> 0;
+  } else {
+    h32 = (seed + PRIME5) >>> 0;
+  }
+
+  h32 = (h32 + (len * 4)) >>> 0;
+
+  while (i < len) {
+    h32 = (rotl32(Math.imul(h32 + Math.imul(arr[i], PRIME3) >>> 0, 17) >>> 0, 11) * PRIME4) >>> 0;
+    i++;
+  }
+
+  h32 = Math.imul(h32 ^ (h32 >>> 15), PRIME2) >>> 0;
+  h32 = Math.imul(h32 ^ (h32 >>> 13), PRIME3) >>> 0;
+  h32 = (h32 ^ (h32 >>> 16)) >>> 0;
+  return h32;
+}
+
+function positionHash(x, y, z, salt) {
+  // Encode as int32 values (truncate/floor)
+  x = (x | 0) >>> 0; y = (y | 0) >>> 0; z = (z | 0) >>> 0; salt = (salt | 0) >>> 0;
+  return xxhash32Ints([x, y, z], salt);
+}
+
+function chainOriginSeed(ox, oy, worldSeed, typeSalt) {
+  return positionHash(ox | 0, oy | 0, typeSalt | 0, worldSeed | 0);
+}
+
+function eventAtDepth(originSeed, depth, salt) {
+  salt = salt || 0;
+  return positionHash(originSeed | 0, depth | 0, 0, salt | 0);
+}
+
+function eventFloat(originSeed, depth, channel) {
+  channel = channel || 0;
+  return (eventAtDepth(originSeed, depth, channel) >>> 0) / 0x100000000;
+}
+
+function eventInt(originSeed, depth, modulus, channel) {
+  channel = channel || 0;
+  return Math.floor(eventFloat(originSeed, depth, channel) * modulus);
+}
+
+function biasedEventType(originSeed, depth, numTypes, transitionBias) {
+  const prevType = depth === 0 ? 0 : eventInt(originSeed, depth - 1, numTypes);
+  const weights = transitionBias[prevType] || new Array(numTypes).fill(1.0);
+  const total = weights.reduce((a, b) => a + b, 0);
+  const raw = eventFloat(originSeed, depth);
+  let cum = 0;
+  for (let i = 0; i < weights.length; i++) {
+    cum += weights[i] / total;
+    if (raw < cum) return i;
+  }
+  return numTypes - 1;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CIVILISATION ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const POLITICAL_EVENTS = [
+  'founding','expansion','civil_war','golden_age',
+  'plague','invasion','reform','collapse','revival'
+];
+
+const POLITICAL_GLYPHS = {
+  founding:'🌿', expansion:'⚔', civil_war:'🔥', golden_age:'☀',
+  plague:'💀', invasion:'🛡', reform:'⚖', collapse:'☠', revival:'🌱'
+};
+
+const TECH_CATEGORIES = [
+  'agriculture','metallurgy','navigation','medicine',
+  'architecture','warfare','philosophy','engineering'
+];
+
+const POLITICAL_TRANSITIONS = {
+  0: [1.0, 2.5, 0.5, 1.0, 0.5, 0.5, 1.0, 0.2, 0.3],
+  1: [0.5, 1.5, 0.8, 1.5, 0.6, 0.8, 1.0, 0.4, 0.4],
+  2: [0.5, 0.5, 0.3, 0.5, 1.5, 2.0, 1.0, 1.5, 0.5],
+  3: [0.5, 1.8, 0.2, 0.5, 0.6, 0.6, 1.8, 0.2, 0.4],
+  4: [0.5, 0.3, 0.8, 0.3, 0.3, 1.0, 1.2, 1.5, 0.8],
+  5: [0.5, 0.5, 1.2, 0.5, 0.8, 0.8, 0.8, 1.5, 0.8],
+  6: [0.5, 1.0, 0.5, 1.2, 0.4, 0.5, 0.8, 0.3, 0.8],
+  7: [0.4, 0.4, 0.4, 0.4, 0.5, 0.5, 0.8, 0.3, 2.8],
+  8: [0.8, 1.5, 0.5, 1.0, 0.5, 0.5, 1.0, 0.3, 0.9],
+};
+
+function civEvent(x, y, worldSeed, depth) {
+  const origin = chainOriginSeed(x, y, worldSeed, 100);
+  const evType = biasedEventType(origin, depth, POLITICAL_EVENTS.length, POLITICAL_TRANSITIONS);
+  const techIdx = eventInt(origin, depth, TECH_CATEGORIES.length, 3);
+  return {
+    depth,
+    event: POLITICAL_EVENTS[evType],
+    magnitude: eventFloat(origin, depth, 1),
+    duration: 1 + eventInt(origin, depth, 20, 2),
+    lasting: eventFloat(origin, depth, 1) > 0.75,
+    tech: TECH_CATEGORIES[techIdx],
+    origin
+  };
+}
+
+function branchingEvent(originSeed, depth, branch) {
+  branch = branch || 0;
+  const branchSeed = positionHash(originSeed | 0, depth | 0, branch | 0, 0);
+  const typeIdx = Math.floor(((branchSeed >>> 0) / 0x100000000) * POLITICAL_EVENTS.length);
+  return {
+    event: POLITICAL_EVENTS[typeIdx],
+    outcome: ((branchSeed >> 16) >>> 0) / 0x100000000,
+    forks: ((branchSeed >> 8) >>> 0) / 0x100000000 > 0.7
+  };
+}
+
+// City name generation from seed
+const CIV_PREFIX = ['Ver','Kal','Mor','Thal','Sel','Aran','Cor','Nev','Myr','Eld'];
+const CIV_MID    = ['an','eth','os','in','ar','um','al','en','ix','or'];
+const CIV_SUFFIX = ['thos','heim','dor','ia','ath','vale','wyn','bur','feld','mark'];
+
+function civName(x, y, ws) {
+  const o = chainOriginSeed(x, y, ws, 999);
+  const p = eventInt(o, 0, CIV_PREFIX.length);
+  const m = eventInt(o, 1, CIV_MID.length);
+  const s = eventInt(o, 2, CIV_SUFFIX.length);
+  return CIV_PREFIX[p] + CIV_MID[m] + CIV_SUFFIX[s];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GENETIC ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const MUTATION_TYPES = [
+  'beneficial_metabolism','neutral_coloration','harmful_immunity',
+  'beneficial_size','neutral_behaviour','beneficial_cognition',
+  'harmful_reproduction','neutral_lifespan'
+];
+
+function genEvent(x, y, worldSeed, generation) {
+  const origin = chainOriginSeed(x, y, worldSeed, 200);
+  const mutIdx = eventInt(origin, generation, MUTATION_TYPES.length);
+  const fitDelta = (eventFloat(origin, generation, 1) - 0.5) * 2;
+  return {
+    generation,
+    mutation: MUTATION_TYPES[mutIdx],
+    fitnessDelta: fitDelta,
+    isDominant: eventFloat(origin, generation, 2) > 0.6,
+    causesSplit: Math.abs(fitDelta) > 0.8
+  };
+}
+
+const GEN_PREFIX = ['Lyr','Vor','Sel','Myr','Cal','Zep','Nar','Ael','Tor','Vex'];
+const GEN_SUFFIX = ['anth','imus','oris','evus','alix','oryn','elid','azur','omis','enth'];
+
+function genName(x, y, ws) {
+  const o = chainOriginSeed(x, y, ws, 888);
+  return GEN_PREFIX[eventInt(o,0,GEN_PREFIX.length)] + GEN_SUFFIX[eventInt(o,1,GEN_SUFFIX.length)];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UI STATE
+// ═══════════════════════════════════════════════════════════════
+
+let civCurrentEra = 0;
+let genCurrentGen = 0;
+
+// ── CIV UI ───────────────────────────────────────────────────
+
+function getCivParams() {
+  return {
+    ws: parseInt(document.getElementById('civWorldSeed').value) || 42,
+    x:  parseInt(document.getElementById('civX').value) || 0,
+    y:  parseInt(document.getElementById('civY').value) || 0,
+  };
+}
+
+function renderCivTimeline(startEra) {
+  const { ws, x, y } = getCivParams();
+  const strip = document.getElementById('civTimeline');
+  strip.innerHTML = '';
+  for (let d = startEra; d < startEra + 13; d++) {
+    const ev = civEvent(x, y, ws, d);
+    const card = document.createElement('div');
+    card.className = `era-card ev-${ev.event}${d === civCurrentEra ? ' current' : ''}`;
+    card.innerHTML = `
+      <div class="era-num">ERA ${d}</div>
+      <span class="era-glyph">${POLITICAL_GLYPHS[ev.event]}</span>
+      <div class="era-type ev-${ev.event}">${ev.event.replace('_',' ')}</div>
+      <div class="era-bar"><div class="era-bar-fill" style="width:${Math.round(ev.magnitude*100)}%;background:currentColor;opacity:0.6;"></div></div>
+      ${ev.lasting ? '<div class="era-lasting">★ lasting</div>' : ''}
+    `;
+    card.onclick = () => selectCivEra(d);
+    card.style.animationDelay = `${(d - startEra) * 0.03}s`;
+    strip.appendChild(card);
+  }
+  document.getElementById('civEraLabel').textContent = startEra;
+  document.getElementById('civEraEndLabel').textContent = startEra + 12;
+}
+
+function renderCivDetail(era) {
+  const { ws, x, y } = getCivParams();
+  const ev = civEvent(x, y, ws, era);
+  const detail = document.getElementById('civDetail');
+  const sign = ev.magnitude >= 0.5 ? '' : '';
+  detail.innerHTML = `
+    <div class="detail-era-num">ERA ${era} · ${ev.tech.toUpperCase()}</div>
+    <div class="detail-event-name ev-${ev.event}">${POLITICAL_GLYPHS[ev.event]} ${ev.event.replace(/_/g,' ')}</div>
+    <div class="detail-row">
+      <div class="detail-stat"><span class="key">Magnitude</span><span class="val">${ev.magnitude.toFixed(3)}</span></div>
+      <div class="detail-stat"><span class="key">Duration</span><span class="val">${ev.duration} yrs</span></div>
+      <div class="detail-stat"><span class="key">Lasting</span><span class="val" style="color:${ev.lasting?'var(--amber)':'var(--text-dim)'}">${ev.lasting ? 'YES' : 'no'}</span></div>
+      <div class="detail-stat"><span class="key">Tech Focus</span><span class="val">${ev.tech}</span></div>
+      <div class="detail-stat"><span class="key">Seed Hash</span><span class="val" style="font-size:0.6rem;">#${ev.origin.toString(16).toUpperCase().padStart(8,'0')}</span></div>
+    </div>
+  `;
+}
+
+function selectCivEra(era) {
+  civCurrentEra = era;
+  document.getElementById('civJump').value = era;
+  renderCivDetail(era);
+  renderCivTimeline(Math.max(0, era - 2));
+  document.getElementById('civSlider').value = Math.min(200, era);
+  document.getElementById('civForkPanel').classList.remove('active');
+}
+
+function civJump() {
+  const era = parseInt(document.getElementById('civJump').value) || 0;
+  selectCivEra(era);
+}
+
+function civFork() {
+  const { ws, x, y } = getCivParams();
+  const era = civCurrentEra;
+  const origin = chainOriginSeed(x, y, ws, 100);
+  const brA = branchingEvent(origin, era, 0);
+  const brB = branchingEvent(origin, era, 1);
+  const panel = document.getElementById('civForkPanel');
+  document.getElementById('forkEraLabel').textContent = era;
+  document.getElementById('forkBranches').innerHTML = `
+    <div class="fork-branch">
+      <div class="fork-branch-label">⑂ Branch A (Main)</div>
+      <div class="era-type ev-${brA.event}">${POLITICAL_GLYPHS[brA.event] || ''} ${brA.event.replace('_',' ')}</div>
+      <div style="font-family:var(--mono);font-size:0.58rem;color:var(--gold);margin-top:6px;">Outcome: ${brA.outcome.toFixed(3)}</div>
+      <div style="font-family:var(--mono);font-size:0.52rem;color:var(--text-dim);">Further fork: ${brA.forks ? 'yes' : 'no'}</div>
+    </div>
+    <div class="fork-branch">
+      <div class="fork-branch-label">⑂ Branch B (Alt)</div>
+      <div class="era-type ev-${brB.event}">${POLITICAL_GLYPHS[brB.event] || ''} ${brB.event.replace('_',' ')}</div>
+      <div style="font-family:var(--mono);font-size:0.58rem;color:var(--gold);margin-top:6px;">Outcome: ${brB.outcome.toFixed(3)}</div>
+      <div style="font-family:var(--mono);font-size:0.52rem;color:var(--text-dim);">Further fork: ${brB.forks ? 'yes' : 'no'}</div>
+    </div>
+  `;
+  panel.classList.add('active');
+}
+
+function renderCivBench() {
+  const { ws, x, y } = getCivParams();
+  const rows = document.getElementById('civBenchRows');
+
+  const t0 = performance.now();
+  civEvent(x, y, ws, 0);
+  const d0 = (performance.now() - t0).toFixed(4);
+
+  const t1 = performance.now();
+  civEvent(x, y, ws, 10000);
+  const d10k = (performance.now() - t1).toFixed(4);
+
+  // Verify order independence
+  const eDeep = civEvent(x, y, ws, 9999);
+  civEvent(x, y, ws, 9998);
+  const eDeep2 = civEvent(x, y, ws, 9999);
+  const orderOK = eDeep.event === eDeep2.event;
+
+  // Verify past stability
+  const ePast = civEvent(x, y, ws, 0);
+  civEvent(x, y, ws, 5000);
+  const ePast2 = civEvent(x, y, ws, 0);
+  const pastOK = ePast.event === ePast2.event;
+
+  rows.innerHTML = `
+    <div class="bench-row"><span class="bench-key">Era 0 compute time</span><span class="bench-val">${d0}ms</span></div>
+    <div class="bench-row"><span class="bench-key">Era 10,000 compute time</span><span class="bench-val">${d10k}ms</span></div>
+    <div class="bench-row"><span class="bench-key">Order independence</span><span class="${orderOK?'bench-pass':'bench-fail'}">${orderOK ? '✓ PASS' : '✗ FAIL'}</span></div>
+    <div class="bench-row"><span class="bench-key">Past stability</span><span class="${pastOK?'bench-pass':'bench-fail'}">${pastOK ? '✓ PASS' : '✗ FAIL'}</span></div>
+    <div class="bench-label" style="margin-top:4px;">depth is a coordinate — no sequential replay</div>
+  `;
+}
+
+// ── GENETIC UI ────────────────────────────────────────────────
+
+function getGenParams() {
+  return {
+    ws: parseInt(document.getElementById('genWorldSeed').value) || 42,
+    x:  parseInt(document.getElementById('genX').value) || 0,
+    y:  parseInt(document.getElementById('genY').value) || 0,
+  };
+}
+
+function renderGenTimeline(startGen) {
+  const { ws, x, y } = getGenParams();
+  const strip = document.getElementById('genTimeline');
+  strip.innerHTML = '';
+  for (let g = startGen; g < startGen + 12; g++) {
+    const ev = genEvent(x, y, ws, g);
+    const card = document.createElement('div');
+    const fitColor = ev.fitnessDelta >= 0 ? '#4aaa6a' : '#aa4444';
+    const fitSign  = ev.fitnessDelta >= 0 ? '+' : '';
+    card.className = `gen-card mut-${ev.mutation}${ev.causesSplit ? ' split-event' : ''}`;
+    card.innerHTML = `
+      <div class="gen-num">GEN ${g}</div>
+      <div class="gen-mutation mut-${ev.mutation}">${ev.mutation.replace(/_/g,' ')}</div>
+      <div class="gen-fitness" style="color:${fitColor}">${fitSign}${ev.fitnessDelta.toFixed(2)}</div>
+      <div class="gen-dom">${ev.isDominant ? 'dominant' : 'recessive'}</div>
+      ${ev.causesSplit ? '<div class="split-badge">⑂ SPLIT</div>' : ''}
+    `;
+    card.style.animationDelay = `${(g - startGen) * 0.03}s`;
+    strip.appendChild(card);
+  }
+}
+
+function renderSparkline(startGen) {
+  const { ws, x, y } = getGenParams();
+  const canvas = document.getElementById('sparkCanvas');
+  canvas.width = canvas.parentElement.clientWidth - 16;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const NUM = 30;
+  const pts = [];
+  let cumFit = 0;
+  for (let g = startGen; g < startGen + NUM; g++) {
+    const ev = genEvent(x, y, ws, g);
+    cumFit += ev.fitnessDelta;
+    pts.push({ g, fit: cumFit, split: ev.causesSplit });
+  }
+
+  const minF = Math.min(...pts.map(p => p.fit));
+  const maxF = Math.max(...pts.map(p => p.fit));
+  const range = maxF - minF || 1;
+
+  const toX = i => (i / (NUM - 1)) * (W - 20) + 10;
+  const toY = f => H - 8 - ((f - minF) / range) * (H - 20);
+
+  // Zero line
+  const zeroY = toY(0);
+  ctx.strokeStyle = 'rgba(90,85,80,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, zeroY);
+  ctx.lineTo(W, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(200,135,10,0.3)');
+  grad.addColorStop(1, 'rgba(200,135,10,0.02)');
+  ctx.beginPath();
+  ctx.moveTo(toX(0), toY(pts[0].fit));
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(toX(i), toY(pts[i].fit));
+  ctx.lineTo(toX(NUM-1), H);
+  ctx.lineTo(toX(0), H);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(200,135,10,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.moveTo(toX(0), toY(pts[0].fit));
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(toX(i), toY(pts[i].fit));
+  ctx.stroke();
+
+  // Split markers
+  pts.forEach((p, i) => {
+    if (p.split) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(200,135,10,0.9)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(toX(i), 4);
+      ctx.lineTo(toX(i), H - 4);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(200,135,10,0.9)';
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillText('⑂', toX(i) - 4, 12);
+    }
+  });
+}
+
+function renderCompare(startGen) {
+  const { ws, x, y } = getGenParams();
+  const colA = document.getElementById('compareA');
+  const colB = document.getElementById('compareB');
+  colA.innerHTML = '';
+  colB.innerHTML = '';
+
+  for (let g = startGen; g < startGen + 5; g++) {
+    const evA = genEvent(x,     y,     ws, g);
+    const evB = genEvent(x + 3, y + 1, ws, g);
+
+    const mkRow = (ev) => {
+      const d = document.createElement('div');
+      const fc = ev.fitnessDelta >= 0 ? '#4aaa6a' : '#aa4444';
+      const sign = ev.fitnessDelta >= 0 ? '+' : '';
+      d.style.cssText = 'font-family:var(--mono);font-size:0.55rem;border:1px solid var(--border);padding:5px 8px;background:var(--panel);';
+      d.innerHTML = `<div style="color:var(--text-dim);font-size:0.48rem">GEN ${ev.generation}</div>
+        <div class="mut-${ev.mutation}" style="font-size:0.52rem;">${ev.mutation.replace(/_/g,' ')}</div>
+        <div style="color:${fc}">${sign}${ev.fitnessDelta.toFixed(3)}</div>
+        ${ev.causesSplit ? '<div style="color:var(--amber);font-size:0.45rem;">⑂ speciation</div>' : ''}`;
+      return d;
+    };
+    colA.appendChild(mkRow(evA));
+    colB.appendChild(mkRow(evB));
+  }
+}
+
+function genJump() {
+  const gen = parseInt(document.getElementById('genJump').value) || 0;
+  genCurrentGen = gen;
+  renderGenTimeline(gen);
+  renderSparkline(gen);
+  renderCompare(gen);
+  renderGenBench();
+}
+
+function renderGenBench() {
+  const { ws, x, y } = getGenParams();
+  const rows = document.getElementById('genBenchRows');
+
+  const t0 = performance.now();
+  genEvent(x, y, ws, 0);
+  const d0 = (performance.now() - t0).toFixed(4);
+
+  const t1 = performance.now();
+  genEvent(x, y, ws, 100000);
+  const d100k = (performance.now() - t1).toFixed(4);
+
+  const gDeep = genEvent(x, y, ws, 99999);
+  genEvent(x, y, ws, 99998);
+  const gDeep2 = genEvent(x, y, ws, 99999);
+  const orderOK = gDeep.mutation === gDeep2.mutation;
+
+  const gPast = genEvent(x, y, ws, 0);
+  genEvent(x, y, ws, 50000);
+  const gPast2 = genEvent(x, y, ws, 0);
+  const pastOK = gPast.mutation === gPast2.mutation;
+
+  rows.innerHTML = `
+    <div class="bench-row"><span class="bench-key">Gen 0 compute time</span><span class="bench-val">${d0}ms</span></div>
+    <div class="bench-row"><span class="bench-key">Gen 100,000 compute time</span><span class="bench-val">${d100k}ms</span></div>
+    <div class="bench-row"><span class="bench-key">Order independence</span><span class="${orderOK?'bench-pass':'bench-fail'}">${orderOK ? '✓ PASS' : '✗ FAIL'}</span></div>
+    <div class="bench-row"><span class="bench-key">Past stability</span><span class="${pastOK?'bench-pass':'bench-fail'}">${pastOK ? '✓ PASS' : '✗ FAIL'}</span></div>
+    <div class="bench-label" style="margin-top:4px;">generation is a coordinate — no ancestry replay</div>
+  `;
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+
+function updateCivName() {
+  const { ws, x, y } = getCivParams();
+  document.getElementById('civName').textContent = civName(x, y, ws);
+}
+
+function updateGenName() {
+  const { ws, x, y } = getGenParams();
+  document.getElementById('genName').textContent = genName(x, y, ws);
+}
+
+function fullCivRefresh() {
+  updateCivName();
+  renderCivTimeline(civCurrentEra);
+  renderCivDetail(civCurrentEra);
+  renderCivBench();
+  document.getElementById('civForkPanel').classList.remove('active');
+}
+
+function fullGenRefresh() {
+  updateGenName();
+  renderGenTimeline(genCurrentGen);
+  renderSparkline(genCurrentGen);
+  renderCompare(genCurrentGen);
+  renderGenBench();
+}
+
+// Slider sync
+document.getElementById('civSlider').addEventListener('input', e => {
+  civCurrentEra = parseInt(e.target.value);
+  document.getElementById('civJump').value = civCurrentEra;
+  renderCivTimeline(civCurrentEra);
+  renderCivDetail(civCurrentEra);
+});
+
+// Input watchers
+['civWorldSeed','civX','civY'].forEach(id => {
+  document.getElementById(id).addEventListener('change', fullCivRefresh);
+});
+['genWorldSeed','genX','genY'].forEach(id => {
+  document.getElementById(id).addEventListener('change', fullGenRefresh);
+});
+
+// Enter key on jump inputs
+document.getElementById('civJump').addEventListener('keydown', e => { if (e.key === 'Enter') civJump(); });
+document.getElementById('genJump').addEventListener('keydown', e => { if (e.key === 'Enter') genJump(); });
+
+// Resize sparkline
+window.addEventListener('resize', () => renderSparkline(genCurrentGen));
+
+// Boot
+fullCivRefresh();
+fullGenRefresh();
+</script>
+</body>
+</html>

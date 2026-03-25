@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZERO-QUADRATIC // Relational Procedural Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --bg2: #0d1220;
+    --bg3: #111827;
+    --teal: #00ffe5;
+    --amber: #ffb700;
+    --crimson: #ff2d55;
+    --violet: #7c5cbf;
+    --dim: #2a3a50;
+    --text: #c8d8e8;
+    --text2: #5a7a99;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; gap: 20px;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, #0d1220, #080c14);
+    border-bottom: 1px solid var(--dim);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px; font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--teal);
+    text-shadow: 0 0 20px var(--teal);
+  }
+  header .sub { font-size: 10px; color: var(--text2); letter-spacing: 2px; margin-left: auto; }
+
+  /* MAIN LAYOUT */
+  .layout { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--dim);
+    display: flex; flex-direction: column;
+    padding: 16px 0;
+  }
+  .sidebar-section { padding: 0 14px 16px; }
+  .sidebar-label {
+    font-size: 9px; letter-spacing: 3px;
+    color: var(--text2); margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .seed-control { display: flex; flex-direction: column; gap: 6px; }
+  .seed-control input[type=range] {
+    width: 100%; appearance: none;
+    height: 3px; background: var(--dim);
+    border-radius: 2px; outline: none;
+    cursor: pointer;
+  }
+  .seed-control input[type=range]::-webkit-slider-thumb {
+    appearance: none; width: 12px; height: 12px;
+    background: var(--teal); border-radius: 50%;
+    box-shadow: 0 0 8px var(--teal);
+  }
+  .seed-val {
+    font-size: 18px; font-family: 'Orbitron', sans-serif;
+    color: var(--teal); text-align: center;
+    text-shadow: 0 0 10px var(--teal);
+  }
+  .divider { height: 1px; background: var(--dim); margin: 4px 14px 16px; }
+
+  .panel-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    background: transparent; border-top: none; border-right: none; border-bottom: none;
+    width: 100%; text-align: left; color: var(--text2);
+    font-family: 'Fira Code', monospace; font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  .panel-btn:hover { background: rgba(0,255,229,0.05); color: var(--text); }
+  .panel-btn.active {
+    border-left-color: var(--teal);
+    background: rgba(0,255,229,0.08);
+    color: var(--teal);
+  }
+  .panel-btn .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--dim); flex-shrink: 0;
+  }
+  .panel-btn.active .dot { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+
+  /* MAIN PANEL */
+  .main {
+    flex: 1; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .panel-header {
+    padding: 14px 24px 10px;
+    border-bottom: 1px solid var(--dim);
+    display: flex; align-items: baseline; gap: 16px;
+    flex-shrink: 0;
+  }
+  .panel-header h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; letter-spacing: 3px;
+    color: var(--teal);
+  }
+  .panel-header .desc { font-size: 10px; color: var(--text2); }
+  .panel-body {
+    flex: 1; position: relative; overflow: hidden;
+  }
+  canvas {
+    position: absolute; top:0; left:0;
+    width:100%; height:100%;
+  }
+
+  /* STATUS BAR */
+  .statusbar {
+    height: 28px; flex-shrink: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--dim);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 24px;
+    font-size: 9px; letter-spacing: 1.5px; color: var(--text2);
+  }
+  .statusbar span b { color: var(--amber); font-weight: 500; }
+  .statusbar .zero { color: var(--teal); font-weight: bold; }
+
+  /* TOOLTIP */
+  #tooltip {
+    position: fixed; pointer-events: none;
+    background: rgba(8,12,20,0.95);
+    border: 1px solid var(--teal);
+    padding: 10px 14px; font-size: 10px;
+    color: var(--text); line-height: 1.7;
+    box-shadow: 0 0 20px rgba(0,255,229,0.2);
+    z-index: 100; display: none;
+    max-width: 220px;
+  }
+  #tooltip .tt-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px; color: var(--teal);
+    letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+  .tt-val { color: var(--amber); }
+
+  /* LEY SLIDER */
+  .overlay-ctrl {
+    position: absolute; bottom: 16px; right: 16px;
+    background: rgba(8,12,20,0.85);
+    border: 1px solid var(--dim);
+    padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 10px; color: var(--text2);
+    z-index: 10;
+  }
+  .overlay-ctrl input[type=range] {
+    width: 120px; appearance: none;
+    height: 3px; background: var(--dim); border-radius: 2px;
+    outline: none; cursor: pointer;
+  }
+  .overlay-ctrl input[type=range]::-webkit-slider-thumb {
+    appearance: none; width: 10px; height: 10px;
+    background: var(--violet); border-radius: 50%;
+    box-shadow: 0 0 6px var(--violet);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ZERO-QUADRATIC</h1>
+  <span style="font-size:10px;color:var(--text2);letter-spacing:2px;">PAIR-IS-SEED // RELATIONAL PROCEDURAL ENGINE</span>
+  <span class="sub">O(N²) // ZERO BYTES STORED // ALL RELATIONSHIPS ON DEMAND</span>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">World Seed</div>
+      <div class="seed-control">
+        <div class="seed-val" id="seedDisplay">1337</div>
+        <input type="range" id="seedSlider" min="0" max="9999" value="1337">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sidebar-label" style="padding:0 14px 8px;">Panels</div>
+    <button class="panel-btn active" onclick="switchPanel(0)">
+      <span class="dot"></span>FACTION TENSION
+    </button>
+    <button class="panel-btn" onclick="switchPanel(1)">
+      <span class="dot"></span>NPC SOCIAL GRAPH
+    </button>
+    <button class="panel-btn" onclick="switchPanel(2)">
+      <span class="dot"></span>TRADE ROUTES
+    </button>
+    <button class="panel-btn" onclick="switchPanel(3)">
+      <span class="dot"></span>LEY LINES
+    </button>
+    <button class="panel-btn" onclick="switchPanel(4)">
+      <span class="dot"></span>SIGNAL FIELD
+    </button>
+    <button class="panel-btn" onclick="switchPanel(5)">
+      <span class="dot"></span>POLITICAL PRESSURE
+    </button>
+  </aside>
+
+  <div class="main">
+    <div class="panel-header">
+      <h2 id="panelTitle">FACTION TENSION & DIPLOMACY</h2>
+      <span class="desc" id="panelDesc">Symmetric pair hash — tension(A,B) = tension(B,A)</span>
+    </div>
+    <div class="panel-body" id="panelBody">
+      <canvas id="mainCanvas"></canvas>
+      <div class="overlay-ctrl" id="leyCtrl" style="display:none;">
+        <span>CONNECTION THRESHOLD</span>
+        <input type="range" id="leyThreshold" min="0" max="90" value="65">
+        <span id="leyThreshVal" style="color:var(--violet);">0.65</span>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span>PAIRS COMPUTED: <b id="pairCount">0</b></span>
+      <span>BYTES STORED: <b class="zero">0</b></span>
+      <span>SEED: <b id="statusSeed">1337</b></span>
+      <span>METHOD: <b id="statusMethod">symmetric pair_hash</b></span>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// ZERO-QUADRATIC HASH CORE
+// ═══════════════════════════════════════════════
+function imul(a, b) { return Math.imul(a, b) >>> 0; }
+
+function murmur32(a, b, c, d, seed) {
+  seed = (seed | 0) >>> 0;
+  let h = seed;
+  const vals = [a & 0xFFFF, b & 0xFFFF, c & 0xFFFF, d & 0xFFFF];
+  for (const v of vals) {
+    let k = imul(v, 0xcc9e2d51);
+    k = (((k << 15) | (k >>> 17)) >>> 0);
+    k = imul(k, 0x1b873593);
+    h ^= k;
+    h = (((h << 13) | (h >>> 19)) >>> 0);
+    h = (imul(h, 5) + 0xe6546b64) >>> 0;
+  }
+  h ^= 4;
+  h ^= h >>> 16; h = imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+function pairHash(ax, ay, bx, by, salt) {
+  let p1x=ax,p1y=ay,p2x=bx,p2y=by;
+  if (ax > bx || (ax === bx && ay > by)) { p1x=bx;p1y=by;p2x=ax;p2y=ay; }
+  return murmur32(p1x & 0xFFFF, p1y & 0xFFFF, p2x & 0xFFFF, p2y & 0xFFFF, salt >>> 0);
+}
+
+function asymPairHash(ax, ay, bx, by, salt) {
+  return murmur32(ax & 0xFFFF, ay & 0xFFFF, bx & 0xFFFF, by & 0xFFFF, salt >>> 0);
+}
+
+function h2f(h) { return (h >>> 0) / 0x100000000; }
+function pointHash(x, y, salt) { return murmur32(x & 0xFFFF, y & 0xFFFF, salt & 0xFFFF, 0, 0); }
+
+let SEED = 1337;
+let totalPairs = 0;
+
+// ═══════════════════════════════════════════════
+// CANVAS + RESIZE
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+
+function resize() {
+  const pb = document.getElementById('panelBody');
+  W = canvas.width = pb.clientWidth;
+  H = canvas.height = pb.clientHeight;
+  render();
+}
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════
+// PANEL STATE
+// ═══════════════════════════════════════════════
+let currentPanel = 0;
+let hoveredNode = -1;
+const panelInfo = [
+  { title:'FACTION TENSION & DIPLOMACY',   desc:'Symmetric pair hash — tension(A,B) = tension(B,A)', method:'symmetric pair_hash' },
+  { title:'NPC SOCIAL GRAPH',              desc:'Abstract-ID pairs — non-spatial relational hashing', method:'pair_hash(idA,0,idB,0)' },
+  { title:'TRADE ROUTE VIABILITY',         desc:'Directional asymmetric hash — flow(A→B) ≠ flow(B→A)', method:'asymmetric pair_hash' },
+  { title:'LEY LINE NETWORK',              desc:'Threshold sparse graph — strength > θ reveals connection', method:'threshold + freq channel' },
+  { title:'SIGNAL PROPAGATION FIELD',      desc:'Quadratic distance falloff — per-pixel field summation', method:'field = Σ pair_hash * falloff' },
+  { title:'POLITICAL PRESSURE MAP',        desc:'Argmax faction dominance — Voronoi via pair hashes', method:'argmax over faction pairs' },
+];
+
+function switchPanel(i) {
+  currentPanel = i;
+  hoveredNode = -1;
+  document.querySelectorAll('.panel-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.getElementById('panelTitle').textContent = panelInfo[i].title;
+  document.getElementById('panelDesc').textContent  = panelInfo[i].desc;
+  document.getElementById('statusMethod').textContent = panelInfo[i].method;
+  document.getElementById('leyCtrl').style.display = i===3 ? 'flex' : 'none';
+  totalPairs = 0;
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// COLOUR HELPERS
+// ═══════════════════════════════════════════════
+function lerpColor(a, b, t) {
+  const ah=[a[0],a[1],a[2]], bh=[b[0],b[1],b[2]];
+  return [ah[0]+(bh[0]-ah[0])*t, ah[1]+(bh[1]-ah[1])*t, ah[2]+(bh[2]-ah[2])*t];
+}
+function rgb(r,g,b,a=1){return`rgba(${r|0},${g|0},${b|0},${a})`;}
+function tensionColor(t) {
+  if (t < 0.3) return lerpColor([0,220,100],[255,183,0], t/0.3);
+  if (t < 0.65) return lerpColor([255,183,0],[255,100,30], (t-0.3)/0.35);
+  return lerpColor([255,100,30],[255,45,85], (t-0.65)/0.35);
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 0 — FACTION TENSION
+// ═══════════════════════════════════════════════
+let factionCities = [];
+function initFaction() {
+  factionCities = [];
+  const names = ['AURORA','DUSK HOLD','IRON VALE','SERPENT GATE','MIREFALL','COLDSPIRE','ASHFEN','VORTEX'];
+  for (let i=0;i<8;i++) {
+    const a = (i/8)*Math.PI*2;
+    const r = Math.min(W,H)*0.3 + h2f(pointHash(i,0,SEED+50))*Math.min(W,H)*0.06;
+    factionCities.push({
+      x: W/2 + Math.cos(a)*r + (h2f(pointHash(i,1,SEED))-0.5)*40,
+      y: H/2 + Math.sin(a)*r + (h2f(pointHash(i,2,SEED))-0.5)*40,
+      name: names[i],
+      culture: h2f(pointHash(i,3,SEED+2))
+    });
+  }
+}
+
+function drawFaction() {
+  totalPairs = 0;
+  ctx.fillStyle = '#080c14';
+  ctx.fillRect(0,0,W,H);
+  // grid dots
+  ctx.fillStyle = 'rgba(40,60,80,0.3)';
+  for (let gx=0;gx<W;gx+=30) for (let gy=0;gy<H;gy+=30) { ctx.beginPath();ctx.arc(gx,gy,1,0,Math.PI*2);ctx.fill(); }
+
+  const cities = factionCities;
+  // Draw edges
+  for (let i=0;i<cities.length;i++) {
+    for (let j=i+1;j<cities.length;j++) {
+      totalPairs++;
+      const a=cities[i], b=cities[j];
+      const ix=(a.x*10)|0, iy=(a.y*10)|0, jx=(b.x*10)|0, jy=(b.y*10)|0;
+      const hostility = h2f(pairHash(ix,iy,jx,jy, SEED+1));
+      const gap = Math.abs(a.culture - b.culture);
+      const rough = h2f(pairHash(ix,iy,jx,jy, SEED+3));
+      const tension = 0.4*hostility + 0.4*gap + 0.2*rough;
+      if (hoveredNode >= 0 && hoveredNode !== i && hoveredNode !== j) continue;
+      const col = tensionColor(tension);
+      const alpha = hoveredNode < 0 ? Math.max(0.1, tension*0.7) : 0.9;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = rgb(col[0],col[1],col[2],alpha);
+      ctx.lineWidth = hoveredNode>=0 ? 1.5 : 0.8 + tension*2;
+      ctx.stroke();
+      // tension label on hovered
+      if (hoveredNode >= 0 && (hoveredNode===i||hoveredNode===j)) {
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        ctx.fillStyle = rgb(col[0],col[1],col[2],0.85);
+        ctx.font = '9px Fira Code';
+        ctx.fillText((tension).toFixed(2), mx+4, my-4);
+      }
+    }
+  }
+  // Draw cities
+  for (let i=0;i<cities.length;i++) {
+    const c = cities[i];
+    const active = hoveredNode === i;
+    const sz = active ? 14 : 10;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(Math.PI/6);
+    ctx.beginPath();
+    for (let s=0;s<6;s++) {
+      const a=s*Math.PI/3;
+      s===0?ctx.moveTo(Math.cos(a)*sz,Math.sin(a)*sz):ctx.lineTo(Math.cos(a)*sz,Math.sin(a)*sz);
+    }
+    ctx.closePath();
+    ctx.fillStyle = active?'rgba(0,255,229,0.25)':'rgba(13,18,32,0.9)';
+    ctx.strokeStyle = active?'#00ffe5':'rgba(0,255,229,0.5)';
+    ctx.lineWidth = active?2:1;
+    if (active) ctx.shadowColor='#00ffe5', ctx.shadowBlur=12;
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = active?'#00ffe5':'#c8d8e8';
+    ctx.font = `${active?10:9}px Fira Code`;
+    ctx.textAlign = 'center';
+    ctx.fillText(c.name, c.x, c.y+sz+12);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 1 — NPC SOCIAL GRAPH
+// ═══════════════════════════════════════════════
+const npcNames = ['ALDRIC','SOVA','KIRAN','THEA','DORN','LYRA','CASS','WOLFE','PIRA','EZRA','MIRA','ZANE'];
+const npcRoles = ['MERCHANT','GUARD','MAGE','THIEF','HEALER','SPY','WARLORD','SAGE','BARD','ASSASSIN','KNIGHT','ORACLE'];
+const roleColors = {MERCHANT:'#ffb700',GUARD:'#00ffe5',MAGE:'#9b59b6',THIEF:'#e74c3c',HEALER:'#2ecc71',SPY:'#e67e22',WARLORD:'#ff2d55',SAGE:'#3498db',BARD:'#f1c40f',ASSASSIN:'#c0392b',KNIGHT:'#7f8c8d',ORACLE:'#16a085'};
+
+function drawNPC() {
+  totalPairs = 0;
+  ctx.fillStyle = '#080c14';
+  ctx.fillRect(0,0,W,H);
+  const N=12; const r=Math.min(W,H)*0.33;
+  const cx=W/2, cy=H/2;
+  const nodes=[];
+  for(let i=0;i<N;i++){
+    const a=(i/N)*Math.PI*2 - Math.PI/2;
+    nodes.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, id:i});
+  }
+  // Edges
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++) {
+    totalPairs++;
+    const bond    = h2f(pairHash(i,0,j,0, SEED));
+    const rivalry = h2f(pairHash(i,1,j,1, SEED));
+    const hov = hoveredNode;
+    if (hov>=0 && hov!==i && hov!==j) continue;
+    let type='neutral', strength=0, col=[80,100,120];
+    if (bond>0.68)    { type='ally';   strength=bond;    col=[0,220,180]; }
+    else if(rivalry>0.68){ type='rival'; strength=rivalry; col=[255,45,85]; }
+    else continue;
+    const alpha = hov<0 ? strength*0.5 : strength*0.85;
+    const lw = strength*2.5;
+    ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y);
+    ctx.strokeStyle = rgb(col[0],col[1],col[2],alpha);
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    if (hov>=0) {
+      const mx=(nodes[i].x+nodes[j].x)/2, my=(nodes[i].y+nodes[j].y)/2;
+      ctx.fillStyle = rgb(col[0],col[1],col[2],0.9);
+      ctx.font='9px Fira Code'; ctx.textAlign='center';
+      ctx.fillText(type.toUpperCase()+' '+strength.toFixed(2),mx,my-4);
+    }
+  }
+  // Nodes
+  for(let i=0;i<N;i++){
+    const n=nodes[i];
+    const roleIdx = Math.floor(h2f(pointHash(i,0,SEED+5))*npcRoles.length);
+    const role = npcRoles[roleIdx];
+    const col = roleColors[role];
+    const active = hoveredNode===i;
+    const sz = active?16:11;
+    ctx.beginPath(); ctx.arc(n.x,n.y,sz,0,Math.PI*2);
+    ctx.fillStyle = active?col+'44':'#111827';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = active?2.5:1.5;
+    if(active){ctx.shadowColor=col;ctx.shadowBlur=15;}
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle=active?col:'#c8d8e8';
+    ctx.font=`${active?9:8}px Fira Code`;
+    ctx.textAlign='center';
+    ctx.fillText(npcNames[i],n.x,n.y+sz+11);
+    if(active){
+      ctx.fillStyle=col;ctx.font='7px Fira Code';
+      ctx.fillText(role,n.x,n.y+sz+20);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 2 — TRADE ROUTES
+// ═══════════════════════════════════════════════
+const portNames=['IRONPORT','SILK HAVEN','AMBER DOCK','FROST QUAY','EMBER WHARF','TIDE GATE'];
+
+function drawTrade() {
+  totalPairs = 0;
+  ctx.fillStyle = '#080c14'; ctx.fillRect(0,0,W,H);
+  // ocean texture
+  ctx.fillStyle='rgba(0,40,80,0.12)';
+  for(let i=0;i<20;i++){
+    ctx.fillRect(0,i*(H/20),W,H/40);
+  }
+  const N=6; const ports=[];
+  for(let i=0;i<N;i++){
+    ports.push({
+      x: W*0.1 + h2f(pointHash(i,0,SEED+20))*W*0.8,
+      y: H*0.1 + h2f(pointHash(i,1,SEED+20))*H*0.8,
+      name: portNames[i]
+    });
+  }
+  const MAX_DIST = Math.hypot(W,H)*0.6;
+  // Directed edges
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++) {
+    if(i===j) continue;
+    totalPairs++;
+    const a=ports[i], b=ports[j];
+    const ax=(a.x*5)|0, ay=(a.y*5)|0, bx=(b.x*5)|0, by=(b.y*5)|0;
+    const resA = h2f(asymPairHash(ax,ay,bx,by,SEED+10));
+    const resB = h2f(asymPairHash(bx,by,ax,ay,SEED+10));
+    const comp = Math.max(0, resA - resB);
+    const dist = Math.hypot(b.x-a.x, b.y-a.y);
+    const penalty = Math.min(1, dist/MAX_DIST)**2;
+    const viability = comp*(1-penalty);
+    if (viability < 0.22) continue;
+    const hov = hoveredNode;
+    if (hov>=0 && hov!==i && hov!==j) continue;
+    const alpha = viability*0.7+(hov>=0?0.3:0);
+    const col = viability>0.6?[255,183,0]:viability>0.4?[0,200,160]:[100,150,200];
+    // draw arrow
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy);
+    const ux=dx/len, uy=dy/len;
+    const sx=a.x+ux*16, sy=a.y+uy*16, ex=b.x-ux*16, ey=b.y-uy*16;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+    ctx.strokeStyle=rgb(col[0],col[1],col[2],alpha);
+    ctx.lineWidth=viability*3+(hov>=0?1:0);
+    ctx.stroke();
+    // arrowhead
+    const arrLen=10; const angle=Math.atan2(ey-sy,ex-sx);
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-arrLen*Math.cos(angle-0.4),ey-arrLen*Math.sin(angle-0.4));
+    ctx.lineTo(ex-arrLen*Math.cos(angle+0.4),ey-arrLen*Math.sin(angle+0.4));
+    ctx.closePath();
+    ctx.fillStyle=rgb(col[0],col[1],col[2],alpha);
+    ctx.fill();
+    if (hov>=0 && (hov===i||hov===j)) {
+      ctx.fillStyle=rgb(col[0],col[1],col[2],0.85);
+      ctx.font='9px Fira Code'; ctx.textAlign='center';
+      ctx.fillText('→ '+viability.toFixed(2), (sx+ex)/2, (sy+ey)/2-5);
+    }
+  }
+  // Port nodes
+  for(let i=0;i<N;i++){
+    const p=ports[i]; const active=hoveredNode===i;
+    const sz=active?13:9;
+    ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,Math.PI*2);
+    ctx.fillStyle=active?'rgba(255,183,0,0.2)':'rgba(13,18,32,0.9)';
+    ctx.strokeStyle=active?'#ffb700':'rgba(255,183,0,0.6)';
+    ctx.lineWidth=active?2:1.5;
+    if(active){ctx.shadowColor='#ffb700';ctx.shadowBlur=12;}
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle=active?'#ffb700':'#c8d8e8';
+    ctx.font=`${active?10:8}px Fira Code`; ctx.textAlign='center';
+    ctx.fillText(p.name,p.x,p.y+sz+12);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 3 — LEY LINES
+// ═══════════════════════════════════════════════
+let leyThreshold = 0.65;
+const leySlider = document.getElementById('leyThreshold');
+const leyThreshVal = document.getElementById('leyThreshVal');
+leySlider.addEventListener('input', ()=>{
+  leyThreshold = leySlider.value/100;
+  leyThreshVal.textContent = leyThreshold.toFixed(2);
+  render();
+});
+
+let leyPhase = 0;
+function drawLey(phase) {
+  totalPairs = 0;
+  ctx.fillStyle = '#080c14'; ctx.fillRect(0,0,W,H);
+  // terrain hint
+  const N=10; const nodes=[];
+  for(let i=0;i<N;i++){
+    nodes.push({
+      x:W*0.1+h2f(pointHash(i,0,SEED+30))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+30))*H*0.8,
+    });
+  }
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+    totalPairs++;
+    const a=nodes[i], b=nodes[j];
+    const ax=(a.x*5)|0, ay=(a.y*5)|0, bx=(b.x*5)|0, by=(b.y*5)|0;
+    const str=h2f(pairHash(ax,ay,bx,by,SEED));
+    if(str<leyThreshold) continue;
+    const freq=0.5+h2f(pairHash(ax,ay,bx,by,SEED+99))*3;
+    const bidir=h2f(pairHash(ax,ay,bx,by,SEED+7))>0.5;
+    const t=(Math.sin(phase*freq)*0.5+0.5);
+    const glow=bidir?str:str*0.7;
+    const alpha=0.3+glow*0.6;
+    const col=bidir?[130,90,200]:[0,200,180];
+    // glowing line
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=rgb(col[0],col[1],col[2],alpha);
+    ctx.lineWidth=glow*3+0.5;
+    ctx.stroke();
+    // pulse dot
+    const px=a.x+(b.x-a.x)*t, py=a.y+(b.y-a.y)*t;
+    ctx.beginPath(); ctx.arc(px,py,3+glow*3,0,Math.PI*2);
+    ctx.fillStyle=rgb(col[0],col[1],col[2],0.85);
+    if(bidir){ctx.shadowColor=rgb(col[0],col[1],col[2],1);ctx.shadowBlur=8;}
+    ctx.fill(); ctx.shadowBlur=0;
+  }
+  // Ley nodes
+  for(let i=0;i<N;i++){
+    const n=nodes[i]; const active=hoveredNode===i;
+    const sz=active?12:8;
+    ctx.beginPath(); ctx.arc(n.x,n.y,sz,0,Math.PI*2);
+    ctx.fillStyle=active?'rgba(124,92,191,0.3)':'rgba(13,18,32,0.9)';
+    ctx.strokeStyle=active?'#7c5cbf':'rgba(124,92,191,0.7)';
+    ctx.lineWidth=active?2:1.5;
+    if(active){ctx.shadowColor='#7c5cbf';ctx.shadowBlur=14;}
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle=active?'#9b7de0':'#c8d8e8';
+    ctx.font='8px Fira Code'; ctx.textAlign='center';
+    ctx.fillText('NODE '+i,n.x,n.y+sz+11);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 4 — SIGNAL FIELD (heatmap)
+// ═══════════════════════════════════════════════
+function drawSignal() {
+  totalPairs = 0;
+  const STEP=6;
+  const N=8;
+  const towers=[];
+  for(let i=0;i<N;i++){
+    towers.push({
+      x:W*0.1+h2f(pointHash(i,0,SEED+40))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+40))*H*0.8
+    });
+  }
+  const MAX_DIST=Math.min(W,H)*0.45;
+  const imgData = ctx.createImageData(W,H);
+  const d=imgData.data;
+  for(let py=0;py<H;py+=STEP) for(let px=0;px<W;px+=STEP){
+    let total=0;
+    for(let i=0;i<N;i++){
+      totalPairs++;
+      const t=towers[i];
+      const tx=(t.x*5)|0, ty=(t.y*5)|0;
+      const sx=(px*5)|0, sy=(py*5)|0;
+      const str=h2f(pairHash(tx,ty,sx,sy,SEED+20));
+      const dist=Math.hypot(px-t.x,py-t.y);
+      const falloff=Math.max(0,1-(dist/MAX_DIST)**2);
+      total+=str*falloff;
+    }
+    const v=Math.min(1,total/3);
+    // colour: dark blue → teal → amber
+    let r,g,b;
+    if(v<0.3){const t=v/0.3;r=0;g=(t*120)|0;b=(100+t*80)|0;}
+    else if(v<0.65){const t=(v-0.3)/0.35;r=(t*200)|0;g=(120+t*80)|0;b=((1-t)*80)|0;}
+    else{const t=(v-0.65)/0.35;r=200+(t*55)|0;g=(200-t*100)|0;b=0;}
+    for(let fy=0;fy<STEP&&py+fy<H;fy++) for(let fx=0;fx<STEP&&px+fx<W;fx++){
+      const idx=((py+fy)*W+(px+fx))*4;
+      d[idx]=r; d[idx+1]=g; d[idx+2]=b; d[idx+3]=200;
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+  // Towers
+  for(let i=0;i<N;i++){
+    const t=towers[i]; const active=hoveredNode===i;
+    const sz=active?13:9;
+    ctx.beginPath();
+    for(let s=0;s<4;s++){
+      const a=s*Math.PI/2+Math.PI/4;
+      s===0?ctx.moveTo(t.x+Math.cos(a)*sz,t.y+Math.sin(a)*sz):
+             ctx.lineTo(t.x+Math.cos(a)*sz,t.y+Math.sin(a)*sz);
+    }
+    ctx.closePath();
+    ctx.fillStyle=active?'rgba(255,183,0,0.3)':'rgba(8,12,20,0.8)';
+    ctx.strokeStyle=active?'#ffb700':'rgba(255,183,0,0.7)';
+    ctx.lineWidth=active?2:1.5;
+    if(active){ctx.shadowColor='#ffb700';ctx.shadowBlur=14;}
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle=active?'#ffb700':'#c8d8e8';
+    ctx.font='8px Fira Code'; ctx.textAlign='center';
+    ctx.fillText('TWR'+i,t.x,t.y+sz+11);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PANEL 5 — POLITICAL PRESSURE (Voronoi)
+// ═══════════════════════════════════════════════
+const factionNames=['SOLARI','IRON PACT','MIDNIGHT','VERDANT','STORM CROWN'];
+const facColors=[[255,183,0],[0,200,200],[160,80,200],[80,200,100],[255,80,80]];
+
+function drawPolitical() {
+  totalPairs = 0;
+  const STEP=5;
+  const N=5;
+  const caps=[];
+  for(let i=0;i<N;i++){
+    caps.push({
+      x:W*0.1+h2f(pointHash(i,0,SEED+60))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+60))*H*0.8
+    });
+  }
+  const MAX_DIST=Math.min(W,H)*0.6;
+  const imgData=ctx.createImageData(W,H);
+  const d=imgData.data;
+  const territory=new Array(N).fill(0);
+  const total=Math.floor(W/STEP)*Math.floor(H/STEP);
+  for(let py=0;py<H;py+=STEP) for(let px=0;px<W;px+=STEP){
+    const pressures=[];
+    for(let i=0;i<N;i++){
+      totalPairs++;
+      const c=caps[i];
+      const cx=(c.x*5)|0, cy=(c.y*5)|0, sx=(px*5)|0, sy=(py*5)|0;
+      const str=h2f(pairHash(cx,cy,sx,sy,SEED+i));
+      const dist=Math.hypot(px-c.x,py-c.y);
+      const falloff=Math.max(0,1-(dist/MAX_DIST)**2);
+      pressures.push(str*falloff*(0.5+h2f(pointHash(i,4,SEED+60))*0.5));
+    }
+    let max=0,dom=0;
+    for(let i=0;i<N;i++) if(pressures[i]>max){max=pressures[i];dom=i;}
+    territory[dom]++;
+    const sorted=[...pressures].sort((a,b)=>b-a);
+    const contest=sorted[0]<0.01?0:Math.max(0,1-(sorted[0]-sorted[1])/sorted[0]);
+    const fc=facColors[dom];
+    const alpha=Math.min(220,100+max*200);
+    const mix=contest*0.5;
+    const r2=(facColors[(dom+1)%N][0]);
+    const rb=fc[0]*(1-mix)+r2*mix;
+    const gb=fc[1]*(1-mix)+facColors[(dom+1)%N][1]*mix;
+    const bb=fc[2]*(1-mix)+facColors[(dom+1)%N][2]*mix;
+    for(let fy=0;fy<STEP&&py+fy<H;fy++) for(let fx=0;fx<STEP&&px+fx<W;fx++){
+      const idx=((py+fy)*W+(px+fx))*4;
+      d[idx]=rb|0; d[idx+1]=gb|0; d[idx+2]=bb|0; d[idx+3]=alpha|0;
+    }
+  }
+  ctx.fillStyle='#080c14'; ctx.fillRect(0,0,W,H);
+  ctx.putImageData(imgData,0,0);
+  // Legend
+  ctx.fillStyle='rgba(8,12,20,0.75)';
+  ctx.fillRect(W-160,10,150,N*22+14);
+  for(let i=0;i<N;i++){
+    const fc=facColors[i];
+    const pct=((territory[i]/total)*100).toFixed(1);
+    ctx.fillStyle=rgb(fc[0],fc[1],fc[2],0.9);
+    ctx.fillRect(W-152,18+i*22,12,12);
+    ctx.fillStyle='#c8d8e8'; ctx.font='9px Fira Code'; ctx.textAlign='left';
+    ctx.fillText(factionNames[i]+' '+pct+'%', W-134, 28+i*22);
+  }
+  // Capitals
+  for(let i=0;i<N;i++){
+    const c=caps[i]; const active=hoveredNode===i;
+    const fc=facColors[i]; const sz=active?16:11;
+    ctx.beginPath(); ctx.arc(c.x,c.y,sz,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${fc[0]},${fc[1]},${fc[2]},${active?0.4:0.2})`;
+    ctx.strokeStyle=rgb(fc[0],fc[1],fc[2],1);
+    ctx.lineWidth=active?3:2;
+    if(active){ctx.shadowColor=rgb(fc[0],fc[1],fc[2],1);ctx.shadowBlur=16;}
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(c.x,c.y,3,0,Math.PI*2);
+    ctx.fillStyle=rgb(fc[0],fc[1],fc[2],1); ctx.fill();
+    ctx.fillStyle=active?rgb(fc[0],fc[1],fc[2],1):'#fff';
+    ctx.font=`${active?10:9}px Fira Code`; ctx.textAlign='center';
+    ctx.fillText(factionNames[i],c.x,c.y+sz+13);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════
+let rafId=null; let framePhase=0;
+function render(phase=framePhase) {
+  if(!W||!H) return;
+  totalPairs=0;
+  ctx.clearRect(0,0,W,H);
+  if(currentPanel===0){initFaction();drawFaction();}
+  else if(currentPanel===1) drawNPC();
+  else if(currentPanel===2) drawTrade();
+  else if(currentPanel===3) drawLey(phase);
+  else if(currentPanel===4) drawSignal();
+  else if(currentPanel===5) drawPolitical();
+  document.getElementById('pairCount').textContent=totalPairs.toLocaleString();
+  document.getElementById('statusSeed').textContent=SEED;
+}
+
+function loop(ts) {
+  framePhase=ts*0.001;
+  if(currentPanel===3) render(framePhase);
+  rafId=requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════════
+// SEED CONTROL
+// ═══════════════════════════════════════════════
+document.getElementById('seedSlider').addEventListener('input',e=>{
+  SEED=parseInt(e.target.value);
+  document.getElementById('seedDisplay').textContent=SEED;
+  hoveredNode=-1;
+  render();
+});
+
+// ═══════════════════════════════════════════════
+// HOVER / INTERACTION
+// ═══════════════════════════════════════════════
+function getNodes() {
+  if(!W||!H) return [];
+  if(currentPanel===0){
+    if(!factionCities.length) initFaction();
+    return factionCities.map((c,i)=>({x:c.x,y:c.y,i}));
+  }
+  if(currentPanel===1){
+    const N=12; const r=Math.min(W,H)*0.33;
+    const cx=W/2,cy=H/2;
+    return Array.from({length:N},(_,i)=>{
+      const a=(i/N)*Math.PI*2-Math.PI/2;
+      return {x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, i};
+    });
+  }
+  if(currentPanel===2){
+    return Array.from({length:6},(_,i)=>({
+      x:W*0.1+h2f(pointHash(i,0,SEED+20))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+20))*H*0.8, i
+    }));
+  }
+  if(currentPanel===3){
+    return Array.from({length:10},(_,i)=>({
+      x:W*0.1+h2f(pointHash(i,0,SEED+30))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+30))*H*0.8, i
+    }));
+  }
+  if(currentPanel===4){
+    return Array.from({length:8},(_,i)=>({
+      x:W*0.1+h2f(pointHash(i,0,SEED+40))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+40))*H*0.8, i
+    }));
+  }
+  if(currentPanel===5){
+    return Array.from({length:5},(_,i)=>({
+      x:W*0.1+h2f(pointHash(i,0,SEED+60))*W*0.8,
+      y:H*0.1+h2f(pointHash(i,1,SEED+60))*H*0.8, i
+    }));
+  }
+  return [];
+}
+
+canvas.addEventListener('mousemove', e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(W/rect.width);
+  const my=(e.clientY-rect.top)*(H/rect.height);
+  const nodes=getNodes();
+  let found=-1, bestD=999;
+  for(const n of nodes){
+    const d=Math.hypot(mx-n.x,my-n.y);
+    if(d<26&&d<bestD){bestD=d;found=n.i;}
+  }
+  if(found!==hoveredNode){hoveredNode=found; if(currentPanel!==3) render();}
+
+  // Tooltip
+  const tt=document.getElementById('tooltip');
+  if(found>=0 && currentPanel<=5){
+    let html='';
+    if(currentPanel===0){
+      const c=factionCities[found];
+      html=`<div class="tt-title">${c.name}</div>`;
+      html+=`<div class="tt-row"><span>CULTURE</span><span class="tt-val">${c.culture.toFixed(3)}</span></div>`;
+      const others=factionCities.filter((_,i)=>i!==found);
+      const tensions=others.map(o=>{
+        const ax=(c.x*10)|0,ay=(c.y*10)|0,bx=(o.x*10)|0,by=(o.y*10)|0;
+        const t=0.4*h2f(pairHash(ax,ay,bx,by,SEED+1))+0.4*Math.abs(c.culture-o.culture)+0.2*h2f(pairHash(ax,ay,bx,by,SEED+3));
+        return{name:o.name,t};
+      }).sort((a,b)=>b.t-a.t);
+      tensions.slice(0,3).forEach(x=>{ html+=`<div class="tt-row"><span>${x.name}</span><span class="tt-val">${x.t.toFixed(2)}</span></div>`; });
+    } else if(currentPanel===1){
+      html=`<div class="tt-title">${npcNames[found]}</div>`;
+      const roleIdx=Math.floor(h2f(pointHash(found,0,SEED+5))*npcRoles.length);
+      html+=`<div class="tt-row"><span>ROLE</span><span class="tt-val">${npcRoles[roleIdx]}</span></div>`;
+      let allies=0,rivals=0;
+      for(let j=0;j<12;j++) if(j!==found){
+        if(h2f(pairHash(found,0,j,0,SEED))>0.68) allies++;
+        if(h2f(pairHash(found,1,j,1,SEED))>0.68) rivals++;
+      }
+      html+=`<div class="tt-row"><span>ALLIES</span><span class="tt-val">${allies}</span></div>`;
+      html+=`<div class="tt-row"><span>RIVALS</span><span class="tt-val">${rivals}</span></div>`;
+    } else if(currentPanel===2){
+      html=`<div class="tt-title">${portNames[found]}</div>`;
+    } else if(currentPanel===3){
+      let connections=0;
+      for(let j=0;j<10;j++) if(j!==found){
+        const a={x:W*0.1+h2f(pointHash(found,0,SEED+30))*W*0.8,y:H*0.1+h2f(pointHash(found,1,SEED+30))*H*0.8};
+        const b={x:W*0.1+h2f(pointHash(j,0,SEED+30))*W*0.8,y:H*0.1+h2f(pointHash(j,1,SEED+30))*H*0.8};
+        if(h2f(pairHash((a.x*5)|0,(a.y*5)|0,(b.x*5)|0,(b.y*5)|0,SEED))>leyThreshold) connections++;
+      }
+      html=`<div class="tt-title">LEY NODE ${found}</div>`;
+      html+=`<div class="tt-row"><span>ACTIVE LINES</span><span class="tt-val">${connections}</span></div>`;
+    } else if(currentPanel===4){
+      html=`<div class="tt-title">TOWER ${found}</div>`;
+      html+=`<div class="tt-row"><span>SIGNAL RANGE</span><span class="tt-val">${(Math.min(W,H)*0.45)|0}px</span></div>`;
+    } else if(currentPanel===5){
+      html=`<div class="tt-title">${factionNames[found]}</div>`;
+    }
+    tt.innerHTML=html;
+    tt.style.display='block';
+    tt.style.left=(e.clientX+16)+'px';
+    tt.style.top=(e.clientY-10)+'px';
+  } else {
+    tt.style.display='none';
+  }
+});
+
+canvas.addEventListener('mouseleave',()=>{
+  hoveredNode=-1;
+  document.getElementById('tooltip').style.display='none';
+  if(currentPanel!==3) render();
+});
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+setTimeout(resize, 100);
+</script>
+</body>
+</html>
