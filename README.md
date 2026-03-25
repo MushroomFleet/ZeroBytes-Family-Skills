@@ -2,6 +2,8 @@
 
 > *The universe springs complete from coordinates. Zero bytes store infinity.*
 
+Edu-site: [https://scuffedepoch.com/zerobytes-family](https://scuffedepoch.com/zerobytes-family)
+
 A collection of Claude Skills implementing the **ZeroBytes Family** of procedural generation methodologies — a unified philosophy of deterministic, stateless, coordinate-addressed world generation. Every member of this family shares one principle: **the identifier of a thing is its seed**. Nothing is stored. Everything is computable.
 
 ---
